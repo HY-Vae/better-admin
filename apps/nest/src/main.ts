@@ -4,6 +4,7 @@ import 'dotenv/config';
 import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
+import type { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { apiReference } from '@scalar/nestjs-api-reference';
 import { AppModule } from './app.module';
@@ -13,7 +14,13 @@ async function bootstrap() {
   // 启动期环境变量校验：缺失 DATABASE_URL / JWT_SECRET 时显式报错
   loadConfig();
 
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+
+  // 反代信任一跳（契约 v1.14.1）：Render 链路 client → Render 代理 → 本进程，
+  // 配置后 req.ip 经 X-Forwarded-For 解析为真实客户端 IP。⚠️ 不配置的话 req.ip
+  // 恒为代理 IP——auth 限流（AuthThrottlerGuard）会全体共桶、一并触发 429；
+  // 将来若再套一层 Cloudflare 橙云代理需改为 2。
+  app.set('trust proxy', 1);
 
   // 全局前缀 /api（与 openapi.yaml servers 路径前缀一致）
   app.setGlobalPrefix('api');
@@ -51,7 +58,7 @@ async function bootstrap() {
   const swaggerConfig = new DocumentBuilder()
     .setTitle('Better Admin API')
     .setDescription('Better Admin Phase 2 (NestJS + PostgreSQL) API Contract')
-    .setVersion('1.10.0')
+    .setVersion('1.14.1')
     .addBearerAuth()
     .build();
   const document = SwaggerModule.createDocument(app, swaggerConfig);

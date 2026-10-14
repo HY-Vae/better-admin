@@ -204,7 +204,12 @@ info:
     供 Render 免费层保活外部定时器调用，规避 15 分钟休眠导致的 30-50 秒冷启动）。
     实现侧约束：该路径不写 api 日志（全局 LoggingInterceptor 显式跳过 /api/health），
     否则每次探活都会落一行 logs 记录、并让「零依赖」端点重新依赖数据库。
-  version: 1.14.0
+    v1.14.1 新增 /auth/login、/auth/demo-login、/auth/refresh 三端点的 429 限流响应
+    （TOO_MANY_REQUESTS）：AuthThrottlerGuard 按 IP 固定窗口计数（login/demo-login
+    20 次/60s、refresh 60 次/60s），进程内存计数（Render 单实例常驻即全局计数），
+    429 不落 api / error 日志（与 DEMO_READONLY 同口径，避免为刷量流量开放刷库通道）。
+    请求 / 响应结构无变化，纯新增错误码文档。
+  version: 1.14.1
 
 servers:
   - url: https://nest.baiwumm.com/api
@@ -1997,6 +2002,18 @@ components:
           example:
             code: VALIDATION_ERROR
             message: 请求参数校验失败
+    TooManyRequests:
+      description: >
+        auth 接口限流（v1.14.1）：同 IP 在固定窗口内请求次数超过阈值
+        （login / demo-login 20 次/60s，refresh 60 次/60s）。
+        429 响应不落 api / error 日志；等待窗口结束后自动恢复，无需人工干预。
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            code: TOO_MANY_REQUESTS
+            message: 请求过于频繁，请稍后再试
     NotFound:
       description: 资源不存在
       content:
@@ -2095,6 +2112,8 @@ paths:
                   value:
                     code: USER_DISABLED
                     message: 账号已停用，请联系管理员
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
 
   /auth/logout:
     post:
@@ -2152,6 +2171,8 @@ paths:
                         type: string
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
 
   /auth/demo-login:
     post:
@@ -2200,6 +2221,8 @@ paths:
                   value:
                     code: DEMO_USER_NOT_AVAILABLE
                     message: 演示账号暂不可用，请稍后再试
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
 
   /auth/me:
     get:

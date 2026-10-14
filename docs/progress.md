@@ -2,6 +2,14 @@
 
 > **新条目追加在最上方（按时间倒序）**；条目中引用的 § 章节号（如 §7.2）指 `AGENTS.md` 对应章节，`§x.y` 指对应设计文档自身章节。
 
+### Nest 端 auth 接口限流：@nestjs/throttler 落地（2026-10-14，契约 v1.14.1）
+
+- **做了什么**：`apps/nest` 精确锁版引入 `@nestjs/throttler` **6.7.1**（Nest 11 peer 兼容），新增 `AuthThrottlerGuard` 挂 `AuthController` 类级：`login` / `demo-login` **20 次/60s per IP**、`refresh` 方法级放宽 **60 次/60s**，超限 429 统一信封 `{ code: 'TOO_MANY_REQUESTS' }`。承接同日 Vercel 侧防火墙限流（见上一条目）留下的缺口：React / Vue 的 API 入口此前完全无防刷。
+- **关键决策**：① **进程内存计数即全局计数**——Render 免费 Web Service 单实例常驻（UptimeRobot 保活的正是常驻），与 serverless 多实例相反，无需 Redis；将来横向扩容再换 throttler 的 storage 实现。② **`main.ts` 配 `app.set('trust proxy', 1)`**（`NestExpressApplication`）：Render 一跳反代，不配的话 `req.ip` 恒为代理 IP、全体用户共桶被一并限流（计费 key 用 trust proxy 解析后的真实 IP；auth 日志取 `X-Forwarded-For[0]` 的既有行为未动）。③ **429 不落 api / error 日志**（`LoggingInterceptor` + `HttpExceptionFilter` 双排除）——与 `DEMO_READONLY` 同口径，拒绝属预期交互，逐条记录等于为刷量流量开放刷库通道。④ `THROTTLE_ENABLED` 开关缺省 `true`，e2e 装配（`test-app.ts`）`??= 'false'` 默认关闭，限流自身的用例（新增 `throttler.e2e-spec.ts` 3 例：阈值内透出业务 401、超限 429 信封、refresh 放宽不误伤）装配前显式开启。⑤ 顺手修复既有漂移：`main.ts` swagger `setVersion` 从 1.10.0 对齐契约真源。
+- **契约**：`openapi.yaml` **v1.14.1** 纯文档补录——`/auth/login`、`/auth/demo-login`、`/auth/refresh` 三口新增 `429`（复用组件 `responses/TooManyRequests`），请求 / 响应结构零变化；四端影响评估：React / Vue 消费端对 429 走既有错误 toast 链路即可，Next / Nuxt 不调本服务。
+- **验证**：`nest build` 通过；改动文件 eslint 0 error；e2e 全量 **7 文件 34 用例全绿**（含新增 3 例，既有用例不受开关默认关闭影响）；本地 prod 构建实测——25 并发连发精确落「20×401 + 5×429」、429 信封正确、伪造不同 `X-Forwarded-For` 为独立计数桶（trust proxy 生效）；UptimeRobot 探活路径 `/api/health` 不在限流范围。线上复验项已登记 runbook §1.3（部署后执行）。
+- **部署状态**：已提交待推送；push 后 Render auto-deploy 生效，`THROTTLE_ENABLED` 线上无需配置（默认开启）。
+
 ### Vercel 防火墙限流上线：Next / Nuxt auth 接口防刷（2026-10-14）
 
 - **做了什么**：在 Vercel WAF 为 `next` / `nuxt` 两个项目各配一条 Rate Limit 规则（Request Path starts with `/api/auth/`，Fixed Window 60s / 20 次 per IP，超限 429），覆盖 `login` / `demo-login` / `refresh` 三个公开入口——线上 `DEMO_MODE=true` 下 `demo-login` 可免密铸造会话，且六端共库，无限流时被刷会先拖垮 Supabase 6543 pooler。选平台层而非代码层的依据（`vercel.json` 不支持 rate limit、serverless 内存限流不可靠、DB 计数反加压）与完整规则记录见 [`docs/launch-runbook.md`](docs/launch-runbook.md) §0.3。

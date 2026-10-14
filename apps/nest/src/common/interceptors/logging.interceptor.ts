@@ -61,6 +61,12 @@ export class LoggingInterceptor implements NestInterceptor {
 
     // 响应完成后异步写日志（不阻塞响应）
     res.on('finish', () => {
+      // 限流 429 不记 api 日志（契约 v1.14.1）：被 AuthThrottlerGuard 拒绝的请求
+      // 属预期拦截，逐条记录等于为刷量流量开放新的刷库通道（与 error 日志的
+      // TOO_MANY_REQUESTS 排除口径一致）
+      if (res.statusCode === 429) {
+        return;
+      }
       const durationMs = Date.now() - start;
       void this.logsService.recordApi({
         method: req.method,

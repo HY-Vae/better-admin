@@ -8,15 +8,24 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
+import { Throttle } from '@nestjs/throttler';
 import { AuthService, AuthUser } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { RefreshDto } from './dto/refresh.dto';
 import { LogoutDto } from './dto/logout.dto';
 import { DemoLoginDto } from './dto/demo-login.dto';
 import { DemoAllowed } from './decorators/demo-allowed.decorator';
+import { AuthThrottlerGuard } from '@/common/guards/auth-throttler.guard';
 import { Request } from 'express';
 
+/** auth 公开口限流阈值（契约 v1.14.1）：login / demo-login 收紧防爆破与免密刷会话 */
+const AUTH_THROTTLE = { default: { limit: 20, ttl: 60_000 } };
+/** refresh 单独放宽：多个用户共享出口 IP 时 token 可能集中过期、集中刷新，勿与 login 同阈 */
+const REFRESH_THROTTLE = { default: { limit: 60, ttl: 60_000 } };
+
 @Controller('auth')
+@UseGuards(AuthThrottlerGuard)
+@Throttle(AUTH_THROTTLE)
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
@@ -41,6 +50,7 @@ export class AuthController {
   @Post('refresh')
   @HttpCode(200)
   @DemoAllowed()
+  @Throttle(REFRESH_THROTTLE)
   async refresh(@Body() dto: RefreshDto) {
     return this.authService.refresh(dto);
   }

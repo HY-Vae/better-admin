@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { AuthModule } from './auth/auth.module';
 import { AccountModule } from './account/account.module';
 import { UsersModule } from './modules/users/users.module';
@@ -29,6 +30,9 @@ import { DemoReadonlyGuard } from './auth/guards/demo-readonly.guard';
     ConfigModule.forRoot({ isGlobal: true }),
     // 定时任务基础设施（消费者：日志清理 LogCleanupService、refresh_tokens 清理 RefreshTokenCleanupService）
     ScheduleModule.forRoot(),
+    // 限流基础设施（契约 v1.14.1）：为 AuthThrottlerGuard 提供 storage 与默认 options；
+    // 此处默认值仅兜底，auth 三口的实际阈值由 auth.controller.ts 的 @Throttle 声明
+    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 20 }]),
     AuthModule,
     AccountModule,
     UsersModule,

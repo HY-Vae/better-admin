@@ -101,7 +101,9 @@ export class HttpExceptionFilter implements ExceptionFilter {
   ) {
     // 演示只读拦截不落 error 日志（契约 v1.10.0）：访客误触写操作属预期交互，
     // 若逐条记录会在演示站持续刷库
-    if (code === 'DEMO_READONLY') {
+    // auth 限流 429 不落 error 日志（契约 v1.14.1）：同理由——被限流拒绝的请求
+    // 属预期拦截，逐条记录等于为刷量流量开放新的刷库通道（防线在 AuthThrottlerGuard）
+    if (code === 'DEMO_READONLY' || code === 'TOO_MANY_REQUESTS') {
       return;
     }
 

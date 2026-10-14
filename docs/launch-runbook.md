@@ -75,6 +75,7 @@ Nest 必须最先：React / Vue 的 API 直接指向它；保活必须紧随其�
 | `CORS_ORIGINS` | ✅ | `https://react.baiwumm.com,https://vue.baiwumm.com`——**只列 React / Vue 两域**（Next / Nuxt 独立全栈不调本服务）；不设则用 main.ts 内置白名单（含 localhost 五端口 + 两生产域） |
 | `DEMO_MODE` | ✅ | `true`（2026-09-22 拍板：线上即演示环境；开启后非白名单写请求一律 403 `DEMO_READONLY`，并开放 `POST /api/auth/demo-login` 快捷登录） |
 | `LOG_API_SKIP_GET` | ✅ | `true`（演示环境 GET 不落 api 日志降噪；非 GET 照记） |
+| `THROTTLE_ENABLED` | 可省 | 默认 `true`（契约 v1.14.1：auth 三口限流开关，login/demo-login 20 次/60s per IP、refresh 60 次/60s，超限 429 `TOO_MANY_REQUESTS`；进程内存计数不碰库。保持默认开启即可，勿关） |
 | `LOG_API_ENABLED` | 可省 | 默认 `true` |
 | `LOG_CLEANUP_*` / `REFRESH_TOKEN_CLEANUP_*` | 可省 | 默认每日北京时间 03:00 / 03:30，保留 30 天 |
 | `SUPABASE_URL` | ✅ | `https://<project>.supabase.co`（头像上传中转） |
@@ -107,6 +108,7 @@ Nest 必须最先：React / Vue 的 API 直接指向它；保活必须紧随其�
 - [x] CORS 预检：`react` / `vue` 两域均 204 + `Access-Control-Allow-Origin` 正确回显 + 全方法放行
 - [x] 外部保活：UptimeRobot 5 分钟 PING 已配置；部署后 uptime 711s 常驻未休眠（跨过 15 分钟阈值后的最终确认随下一端冒烟复测 uptime 连续性）
 - [x] 演示只读验证：带 token `POST /users` → 403 `DEMO_READONLY`（「演示环境，禁止修改数据」）——`DEMO_MODE=true` 生效
+- [ ] auth 限流线上复验（契约 v1.14.1，2026-10-14 部署后执行）：`POST /api/auth/login` 同 IP 连发 25 次 → 前 20 个 401 + 后 5 个 429，429 信封 `{ code: 'TOO_MANY_REQUESTS', message: '请求过于频繁，请稍后再试' }`，60 秒窗口后恢复；本地 prod 构建已实测同结果（trust proxy 生效：伪造不同 `X-Forwarded-For` 为独立计数桶）。UptimeRobot 探活打 `/api/health`（不在限流范围）不受影响。
 
 > **指纹判据修正（实测纠偏）**：Render 平台自身挂在 Cloudflare for SaaS 后面，任何 Render 服务的响应都带 `server: cloudflare` / `cf-ray` 头——**不能**以「有无 cf 头」判断本 zone 是否开了橙云；正确判据是 DNS 解析链（见第一条）。
 

@@ -20,6 +20,9 @@ export interface ApiResult<T = Record<string, unknown>> {
  * CORS / Swagger 文档不影响行为断言，不起。
  */
 export async function createTestApp(): Promise<TestApp> {
+  // e2e 默认关闭 auth 限流（契约 v1.14.1）：登录类用例（含失败重试）可能超过阈值
+  // 被 429 打断；限流自身的用例（throttler.e2e-spec.ts）在装配前显式置 'true' 覆盖
+  process.env.THROTTLE_ENABLED ??= 'false';
   const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
   // logger 保留 error/warn 级：500 等未捕获异常的堆栈直接落到测试输出，便于定位
   const app = moduleRef.createNestApplication({ logger: ['error', 'warn'] });
