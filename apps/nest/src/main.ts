@@ -16,13 +16,15 @@ async function bootstrap() {
 
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
-  // 反代信任两跳（契约 v1.14.1 纠偏）：真实链路是 client → Cloudflare for SaaS（Render
-  // 平台自带边缘，见 runbook §1.3 指纹判据修正）→ Render 内部代理 → 本进程。设 1 时
-  // req.ip 会解析到 CF 边缘 IP（池大逐请求抖动，限流桶永远凑不满——2026-10-14 线上
-  // 实测取证：XFF[0] 稳定而限流不触发）；设 2 才落到真实客户端 IP。
-  // ⚠️ 不配置的话 req.ip 恒为代理 IP——auth 限流（AuthThrottlerGuard）会全体共桶、
-  // 一并触发 429；将来链路再加一层代理需同步 +1。
-  app.set('trust proxy', 2);
+  // 反代信任三跳（契约 v1.14.1，2026-10-14 线上取证定值）：真实链路是
+  // client → Cloudflare for SaaS 边缘（104.22.x.x，Render 平台自带，见 runbook §1.3
+  // 指纹判据修正）→ Render 内部代理（10.x 私网）→ 本进程，共 3 跳。实测取证样本
+  // （error 日志 detail.xff）：「113.80.30.201, 104.22.66.147, 10.24.6.4」——
+  // 设 1 / 2 时 req.ip 都会落在 CF 边缘池（逐请求抖动，限流桶永远凑不满）；
+  // 设 3 才解析到真实客户端 IP。⚠️ 客户端伪造的 X-Forwarded-For 会被上游保留在
+  // 最左、真实 IP append 在后（已实测），故绝不能用 XFF[0] 做限流 key，必须走
+  // trust 语义；Render 内部代理层数若变化，此处需同步调整。
+  app.set('trust proxy', 3);
 
   // 全局前缀 /api（与 openapi.yaml servers 路径前缀一致）
   app.setGlobalPrefix('api');
