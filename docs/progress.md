@@ -2,6 +2,12 @@
 
 > **新条目追加在最上方（按时间倒序）**；条目中引用的 § 章节号（如 §7.2）指 `AGENTS.md` 对应章节，`§x.y` 指对应设计文档自身章节。
 
+### Vercel 防火墙限流上线：Next / Nuxt auth 接口防刷（2026-10-14）
+
+- **做了什么**：在 Vercel WAF 为 `next` / `nuxt` 两个项目各配一条 Rate Limit 规则（Request Path starts with `/api/auth/`，Fixed Window 60s / 20 次 per IP，超限 429），覆盖 `login` / `demo-login` / `refresh` 三个公开入口——线上 `DEMO_MODE=true` 下 `demo-login` 可免密铸造会话，且六端共库，无限流时被刷会先拖垮 Supabase 6543 pooler。选平台层而非代码层的依据（`vercel.json` 不支持 rate limit、serverless 内存限流不可靠、DB 计数反加压）与完整规则记录见 [`docs/launch-runbook.md`](docs/launch-runbook.md) §0.3。
+- **验证**：两端实测 25 并发失败登录（不存在用户名，无副作用、不写日志）均精确落在「20×401 + 5×429」，窗口过后自动恢复 401；应用代码零改动、零新依赖。
+- **已知限制**：规则只存在于 Vercel Dashboard（不随仓库走，重建项目须按 runbook §0.3 重配）；计数按 region 统计、属护栏非硬保证；触发后自动封禁 IP 的持久化动作需 Pro；Nest（Render）不受覆盖，React / Vue 的 API 防刷暂未做（记录在案，另行评估）。
+
 ### Next / Nuxt 接入 @vercel/analytics 站点分析（2026-09-29）
 
 - **做了什么**：`apps/next` 与 `apps/nuxt` 各装 `@vercel/analytics` **2.0.1**（精确锁版，两端独立 lockfile）。接入点各一处、零业务代码改动：Next 用 `@vercel/analytics/next` 的 `<Analytics />`，挂在 `src/app/layout.tsx` 根布局 `<body>` 内 `Providers` 之后；Nuxt 用官方模块 `@vercel/analytics/nuxt`，加进 `nuxt.config.ts` 的 `modules` 数组即可——该模块内部经 `addTemplate` 注册一份 client-only 插件调 `injectAnalytics()`，**不需要手写 plugin**。

@@ -26,6 +26,29 @@ Nest 必须最先：React / Vue 的 API 直接指向它；保活必须紧随其�
 - `SEED_ADMIN_PASSWORD` **仅对全新库首次 seed 生效**：共库已有 admin，重跑 seed 走 `onConflictDoNothing` 不会覆盖现有密码——线上配置可不管此变量。
 - 环境变量只在各平台后台配置；**任何真实密钥不进仓库、不进文档、不进聊天记录**。
 
+### 0.3 Vercel 防火墙限流规则（2026-10-14 新增，Next / Nuxt 两项目各自配置）
+
+背景：Next / Nuxt 的 `/api/auth/*` 三个公开入口（`login` / `demo-login` / `refresh`）应用层无限流，且线上 `DEMO_MODE=true` 时 `demo-login` 可免密铸造会话；六端共用同一个 Supabase 库，接口被刷会先拖垮 6543 pooler 连接。故在 **Vercel WAF** 平台层配限流——零代码改动，且被 429 的请求不产生函数调用。
+
+**规则内容**（Dashboard → 项目 → Firewall → Configure → 新建 Rate Limit 规则「Auth API 限流 · IP 防刷」，`next` 与 `nuxt` 两个项目**各配一份**）：
+
+| 项 | 值 |
+| --- | --- |
+| If | Request Path **starts with** `/api/auth/` |
+| Rate Limit | Fixed Window，**60 seconds / 20 requests**，Key = **IP Address** |
+| Then | **Too Many Requests (429)** |
+
+**为什么配平台层而非代码层**：`vercel.json` 的 `routes.mitigate` 只支持 challenge / deny、不支持 rate limit；serverless 实例内存限流不可靠；DB 计数反给共库加压。Vercel WAF Rate Limiting 全套餐可用（注意 Hobby 每项目仅 1 条 rate limit 规则额度、自定义规则共 3 条；「触发后按 IP 拉黑一段时间」的持久化动作需 Pro）。
+
+**验证（2026-10-14 实测，两端结果一致）**：25 并发失败登录（用不存在的用户名，无副作用、不写日志）→ 前 20 个 `401`（放行到应用）+ 第 21 个起 `429`，分界正好落在 20 次；等待窗口过后单发恢复 `401`。⚠️ Fixed Window 语义：触发后整个 60 秒窗口内继续 `429` 属预期，不是故障。
+
+**注意事项**：
+
+- 规则只存在于 Vercel Dashboard（按项目隔离），**不随仓库走**——重建项目 / 换团队必须按本节重配并复测。
+- 计数器**按 region 维度**统计，多 region 流量可能超出单 region 限额——护栏而非硬保证。
+- IP 维度在共享 NAT（办公室 / 运营商 CGNAT）下可能误伤，20 次/分对真人足够宽松，勿盲目调低。
+- Nest（Render）不在 Vercel 规则覆盖内；React / Vue 的 API 走 Nest，如需同等防刷需另行评估（暂未做）。
+
 ---
 
 ## 1 · Nest（Render）— 第一个部署
@@ -184,6 +207,7 @@ Render Dashboard → 该服务 → **Redeploy 上一版本**（Deployments 列�
 - [x] 演示只读：带 demo token `POST /api/users` → 403 `DEMO_READONLY`
 - [x] 头像上传走通（Storage 中转）✅（2026-09-23 用户完成）
 - [x] 无 500 / 水合报错（控制台）✅（2026-09-23 用户完成）
+- [x] 防火墙限流生效（2026-10-14）：`POST /api/auth/login` 25 并发失败登录 → 20×401 + 5×429，窗口过后恢复 401（规则见 §0.3）
 
 ### 4.3 回滚
 
@@ -224,6 +248,7 @@ Vercel Dashboard → Deployments → 上一成功版本 → **Instant Rollback**
 - [x] 演示快捷登录 200（随机演示账号）+ demo token 写请求 → 403 `DEMO_READONLY`
 - [x] 头像上传走通（Storage 中转）✅（2026-09-23 用户完成）
 - [x] 无 500 / 控制台报错 ✅（2026-09-23 用户完成）
+- [x] 防火墙限流生效（2026-10-14）：`POST /api/auth/login` 25 并发失败登录 → 20×401 + 5×429，窗口过后恢复 401（规则见 §0.3）
 
 > 实测备注：首次登录 ~7s 为 Vercel 冷启动 + Supavisor 6543 建连叠加，属预期；后续请求正常。
 
