@@ -127,6 +127,9 @@ export class HttpExceptionFilter implements ExceptionFilter {
             message,
             path: request.originalUrl ?? request.url,
             method: request.method,
+            // trust proxy 解析后的客户端 IP 本体（区别于行级 ip 取 XFF[0]）：
+            // 排查限流（AuthThrottlerGuard 按 req.ip 分桶）是否命中预期 IP 的唯一取证位
+            clientIp: request.ip,
             stack: exception instanceof Error ? exception.message : String(exception),
           },
         })
