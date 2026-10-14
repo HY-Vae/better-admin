@@ -16,11 +16,13 @@ async function bootstrap() {
 
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
-  // 反代信任一跳（契约 v1.14.1）：Render 链路 client → Render 代理 → 本进程，
-  // 配置后 req.ip 经 X-Forwarded-For 解析为真实客户端 IP。⚠️ 不配置的话 req.ip
-  // 恒为代理 IP——auth 限流（AuthThrottlerGuard）会全体共桶、一并触发 429；
-  // 将来若再套一层 Cloudflare 橙云代理需改为 2。
-  app.set('trust proxy', 1);
+  // 反代信任两跳（契约 v1.14.1 纠偏）：真实链路是 client → Cloudflare for SaaS（Render
+  // 平台自带边缘，见 runbook §1.3 指纹判据修正）→ Render 内部代理 → 本进程。设 1 时
+  // req.ip 会解析到 CF 边缘 IP（池大逐请求抖动，限流桶永远凑不满——2026-10-14 线上
+  // 实测取证：XFF[0] 稳定而限流不触发）；设 2 才落到真实客户端 IP。
+  // ⚠️ 不配置的话 req.ip 恒为代理 IP——auth 限流（AuthThrottlerGuard）会全体共桶、
+  // 一并触发 429；将来链路再加一层代理需同步 +1。
+  app.set('trust proxy', 2);
 
   // 全局前缀 /api（与 openapi.yaml servers 路径前缀一致）
   app.setGlobalPrefix('api');
