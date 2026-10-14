@@ -128,8 +128,11 @@ export class HttpExceptionFilter implements ExceptionFilter {
             path: request.originalUrl ?? request.url,
             method: request.method,
             // trust proxy 解析后的客户端 IP 本体（区别于行级 ip 取 XFF[0]）：
-            // 排查限流（AuthThrottlerGuard 按 req.ip 分桶）是否命中预期 IP 的唯一取证位
+            // 排查限流（AuthThrottlerGuard 按 req.ip 分桶）是否命中预期 IP 的唯一取证位；
+            // xff / reqIps 记录原始转发链与 trust 解析中间值，用于核实代理跳数配置
             clientIp: request.ip,
+            xff: request.headers['x-forwarded-for'],
+            reqIps: request.ips,
             stack: exception instanceof Error ? exception.message : String(exception),
           },
         })
