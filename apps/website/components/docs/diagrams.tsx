@@ -783,7 +783,7 @@ const ROADMAP = [
 export function RoadmapDiagram() {
   return (
     <Frame
-      title="路线图：演示场两阶段 + Phase 0 演示准备 + Phase C 概览均已完成，下一步统一上线"
+      title="路线图：演示场两阶段 + Phase 0 演示准备 + Phase C 概览均已完成，六端已于 2026-09-23 统一上线"
       viewBox="0 0 720 214"
     >
       <line
