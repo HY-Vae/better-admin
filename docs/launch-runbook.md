@@ -12,14 +12,14 @@
 ### 0.1 上线顺序（必须遵守）
 
 ```text
-① Nest（Render）→ ② Nest 外部保活 → ③ React / Vue（CF Workers）→ ④ Next / Nuxt（Vercel）→ ⑤ website（Vercel）→ ⑥ 收官线上契约冒烟
+① Nest（Render）→ ② Nest 外部保活 → ③ React / Vue（CF Workers）→ ④ Next / Nuxt（Vercel）→ ⑤ website（CF Workers 静态导出，2026-09-23 当日由 Vercel 改判）→ ⑥ 收官线上契约冒烟
 ```
 
 Nest 必须最先：React / Vue 的 API 直接指向它；保活必须紧随其后（Render 免费层 15 分钟不活跃即休眠，且 Nest 进程内的日志 / refresh_token 清理 cron 依赖常驻才执行）。
 
 ### 0.2 数据库与密钥总则
 
-- 四端（含 website 除外）共用**同一个 Supabase PostgreSQL**：dev 与线上本就是同一个库，任何环境都不存在「独立测试库」，线上冒烟因此只做只读 + 登录验证。
+- 除 website 外的五端共用**同一个 Supabase PostgreSQL**：dev 与线上本就是同一个库，任何环境都不存在「独立测试库」，线上冒烟因此只做只读 + 登录验证。
 - `DATABASE_URL` 一律使用 **6543 transaction pooler** 端口（本地 dev 用 5432 session pooler 的差异不要带上线）；**URL 中禁止携带 `sslmode` 参数**——SSL 由代码层配置，URL 带了会因证书链校验连库失败。
 - JWT 密钥：`JWT_SECRET` 必填强随机值（Nest 缺失或纯空白**启动即抛错**，无明文兜底）；`JWT_REFRESH_SECRET` 建议独立设置，留空回退 `JWT_SECRET`。
 - Supabase Storage 密钥使用**新 API key 体系**：`SUPABASE_SECRET_KEY` 取 `sb_secret_` 前缀的 Secret key（走 `apikey` 请求头）；旧 service_role JWT key 2026 年底废弃，不要再用。

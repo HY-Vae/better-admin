@@ -10,7 +10,7 @@
 
 - 后续 Vue、Next.js、Nuxt 版本以 React 版本的页面结构、UI 组件、视觉、交互、响应式与 Dark Mode 行为作为参考基准。
 - **`/react` 基于 Hero UI 模板实现，不含 Shadcn UI 组件**，新增功能一律使用 Hero UI。
-- **UI 组件库策略**：React（含 Next.js）只有 **Hero UI + 项目级自定义组件** 两级（Shadcn 层级已作废）（优先级：Hero UI > Shadcn UI > 项目级自定义）；样式变量以 Hero UI 设计体系为主要参考（详见 `AGENTS.md` §7.2 / `ui-spec.md` §18.3）。
+- **UI 组件库策略**：React（含 Next.js）只有 **Hero UI + 项目级自定义组件** 两级（Shadcn 层级已作废）；样式变量以 Hero UI 设计体系为主要参考（详见 `AGENTS.md` §7.2 / `ui-spec.md` §18.3）。
 - React 是纯前端实现，**不直接连接数据库**，通过 NestJS API 访问数据：
 
 ```text
@@ -30,7 +30,7 @@ Browser → React → NestJS API → PostgreSQL
 | 构建工具 | Vite（含 `@vitejs/plugin-react`） | `8.0.16` |
 | 样式 | Tailwind CSS（v4，CSS-first，`@tailwindcss/vite` 插件，无 `tailwind.config`） | `4.3.1` |
 | 字体 | 默认 **Maple Mono CN**（`index.html` 内联声明）+ system 回退 | — |
-| UI 组件库 | **Hero UI**（`@heroui/react` + `@heroui/styles`）；**当前无任何 shadcn / radix 组件**，Shadcn UI 仅为策略上的补充选项（按需引入） | `3.2.6` |
+| UI 组件库 | **Hero UI**（`@heroui/react` + `@heroui/styles`）；**当前无任何 shadcn / radix 组件**，策略为两级：Hero UI + 项目级自定义组件（Shadcn 层级已于 2026-09-22 作废，见 `ui-spec.md` §18.3） | `3.2.6` |
 | 路由 | TanStack Router（文件式路由 `src/routes/`，自动生成 `src/routeTree.gen.ts`） | `1.168.22` |
 | 状态管理 | Zustand（全局 store，如 `src/stores/auth-store.ts`） | `5.0.12` |
 | 数据请求 | TanStack Query + fetch 封装（统一走 `src/lib/api-client.ts` 请求 NestJS REST API，无 axios） | `5.99.0` |

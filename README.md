@@ -17,7 +17,7 @@
 <p align="center">
   <a href="https://better-admin.baiwumm.com"><img src="https://img.shields.io/badge/%E6%96%87%E6%A1%A3%E7%AB%99-%E5%9C%A8%E7%BA%BF-0A0A0A?style=flat-square" alt="官方文档站在线" /></a>
   <a href="https://github.com/baiwumm/better-admin/actions/workflows/ci.yml"><img src="https://github.com/baiwumm/better-admin/actions/workflows/ci.yml/badge.svg?branch=main&style=flat-square" alt="CI" /></a>
-  <img src="https://img.shields.io/badge/%E7%89%88%E6%9C%AC-1.0.0-0A0A0A?style=flat-square" alt="版本 1.0.0" />
+  <img src="https://img.shields.io/badge/%E7%89%88%E6%9C%AC-1.1.0-0A0A0A?style=flat-square" alt="版本 1.1.0" />
   <img src="https://img.shields.io/badge/%E5%85%AD%E7%AB%AF%E5%B7%B2%E4%B8%8A%E7%BA%BF-2026--09--23-2ea44f?style=flat-square" alt="六端已于 2026-09-23 上线" />
   <a href="docs/feature-matrix.md"><img src="https://img.shields.io/badge/%E5%8A%9F%E8%83%BD%E5%AF%B9%E9%BD%90-29%2F29-2ea44f?style=flat-square" alt="四端功能对齐 29/29" /></a>
   <a href="./LICENSE"><img src="https://img.shields.io/badge/license-MIT-0A0A0A?style=flat-square" alt="MIT License" /></a>
@@ -74,7 +74,7 @@
 | Next.js | [`apps/next`](apps/next) | Next 16 App Router（独立全栈，不依赖 NestJS） | Hero UI v3 |
 | Nuxt | [`apps/nuxt`](apps/nuxt) | Nuxt 4 + Nitro（独立全栈，不依赖 NestJS） | Nuxt UI v4（唯一） |
 | NestJS | [`apps/nest`](apps/nest) | Nest 11 + Drizzle ORM + PostgreSQL | — |
-| 文档站 | [`apps/website`](apps/website) | Next 16 静态导出 + fumadocs（/docs）+ beUI 风格首页 | fumadocs-ui + beUI 首页 |
+| 文档站 | [`apps/website`](apps/website) | Next 16 静态导出；`/` 首页为 beUI 风格自绘组件，`/docs` 用 fumadocs | fumadocs-ui（/docs）+ 自绘首页组件 |
 
 React 是 **UI Source of Truth**；四个前端页面结构、交互、视觉与 Design Tokens 保持一致（细则见 [`docs/ui-spec.md`](docs/ui-spec.md)）。
 
@@ -86,6 +86,7 @@ better-admin/
 ├── docs/          # 项目文档（需求真源 / UI 规范 / 进度 / 机制沉淀）
 ├── assets/logo/   # 跨端共享的品牌资产真源
 ├── scripts/       # 仓库级脚本（sync-versions 版本同步）
+├── package.json   # 产品版本唯一真源（发布流程见 AGENTS.md §15）
 └── AGENTS.md      # 开发规范（含 AI Agent 硬性规则）
 ```
 
@@ -110,13 +111,10 @@ cd apps/next && pnpm install && pnpm dev     # 或 apps/nuxt（独立全栈，�
 
 | 文档 | 内容 |
 | --- | --- |
+| [`AGENTS.md`](AGENTS.md) | 开发规范与 AI Agent 硬性规则（**全部文档索引见其 §13**） |
 | [`docs/requirements.md`](docs/requirements.md) | 业务需求真源 |
-| [`docs/ui-spec.md`](docs/ui-spec.md) | UI 规范真源（组件策略 / Design Tokens / 品牌资产） |
 | [`docs/feature-matrix.md`](docs/feature-matrix.md) | 四端功能对齐状态 |
-| [`docs/progress.md`](docs/progress.md) | 阶段性进度（倒序） |
-| [`docs/mechanisms.md`](docs/mechanisms.md) | 机制沉淀（技术结论） |
-| [`docs/launch-runbook.md`](docs/launch-runbook.md) | 六端上线记录与运维手册 |
-| [`AGENTS.md`](AGENTS.md) | 开发规范与 AI Agent 硬性规则 |
+| [`docs/launch-runbook.md`](docs/launch-runbook.md) | 部署 / 冒烟 / 回滚运维手册 |
 
 ## ⚖️ License
 

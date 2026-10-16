@@ -28,7 +28,7 @@ Nuxt UI 内置组件（@nuxt/ui）
 
 所有涉及 Vue / Nuxt 的代码生成任务，产出代码前必须：
 
-1. 确认 Skill 已安装可用：`npx skills ls -g` 应能列出 `nuxt/ui` 与 antfu/skills 系列（`vue`、`vue-best-practices` 等）；项目级任务还应确认 `docs/nuxt-ui-guide.md` 可读。
+1. 确认 Skill 已安装可用：`npx skills ls` 应能列出 `nuxt/ui` 与 antfu/skills 系列（`vue`、`vue-best-practices` 等，Vue / Nuxt 全套已装于项目级 `.agents/skills/`）；项目级任务还应确认 `docs/nuxt-ui-guide.md` 可读。
 2. 查阅 Nuxt UI 官方文档确认目标组件存在、props/slots 用法正确（v4 文档地址形如 `https://ui.nuxt.com/docs/components/<kebab-name>`）。
 3. 布局相关代码**必须优先使用 Dashboard 套件**：`UDashboardGroup`、`UDashboardPanel`、`UDashboardSidebar`、`UDashboardNavbar`、`UDashboardSearch`、`UDashboardSearchButton`、`UDashboardSidebarCollapse`、`UCommandPalette`；**禁止从零手写 Sidebar/Header 布局**。
 4. 不凭记忆写 API：文档与记忆冲突时以文档为准，并在发现差异时回写更新本指引。
@@ -182,7 +182,7 @@ import ui from '@nuxt/ui/vue-plugin'
 
 ## 8. Skill 环境
 
-- `nuxt/ui` Skill 与 antfu/skills 系列（`vue` / `vue-best-practices` / `vue-router-best-practices` / `vue-testing-best-practices` / `vueuse-functions` / `pinia` / `vitest` / `vite` 等）全局安装于用户级 `~/.agents/skills/`；验证命令：`npx skills ls -g`。
+- `nuxt/ui` Skill 与 antfu/skills 系列（`vue` / `vue-best-practices` / `vue-router-best-practices` / `vue-testing-best-practices` / `vueuse-functions` / `pinia` / `vitest` / `vite` 等）已装于**项目级** `.agents/skills/`；验证命令：`npx skills ls`。
 - 代码生成任务开工前按 §2 前置检查执行；Skill 用法与官方文档冲突时以官方文档为准。
 
 ## 9. 图表库（Unovis）使用事实（Vue 端，基线 1.7.0）

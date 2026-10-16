@@ -1,438 +1,176 @@
 # AGENTS.md — Better Admin 项目开发指南
 
-> 本文件用于指导后续 AI Agent 与开发者进行整个 Better Admin 项目的开发。
-> 在开始任何业务开发之前，请务必完整阅读本文档与 [`docs/requirements.md`](docs/requirements.md)。
-
----
+> 指导 AI Agent 与开发者进行整个 Better Admin 项目的开发；业务开发前必读本文档与 [`docs/requirements.md`](docs/requirements.md)。
+> 本文件只存**硬性规则 + 当前阶段指针**，细则一律「相对路径 + 章节号」指向真源文档，禁止复制规则内容（§13）。章节编号被全仓 110+ 处引用，**不得重排**；§18 有序列表条目只追加、不插入。
 
 ## 1. 项目简介
 
-Better Admin 是一个使用 **React、Vue、Next.js、Nuxt、NestJS** 分别实现的全栈 Admin 系统，核心理念是**同一套产品、同一套 UI、同一套业务逻辑、同一套数据库，分别用不同技术栈完成实现**。
-
-> 项目定位、目标与技术栈角色详见 [`docs/requirements.md`](docs/requirements.md) §1-§4。
-
----
+Better Admin 是用 **React、Vue、Next.js、Nuxt、NestJS** 分别实现的全栈 Admin 系统，核心理念是**同一套产品、同一套 UI、同一套业务逻辑、同一套数据库，分别用不同技术栈完成实现**。定位与目标详见 [`docs/requirements.md`](docs/requirements.md) §1-§2。
 
 ## 2. 项目目标
 
-> 完整目标与技术栈定位详见 [`docs/requirements.md`](docs/requirements.md) §2。以下为本文件需要的规则性约束：
-
 - 所有版本共用**同一个 PostgreSQL 数据库**（Supabase 托管）。
-- 保持 UI、业务逻辑、数据结构与 API Contract 在各技术栈间**尽可能一致**。
-
----
+- UI、业务逻辑、数据结构与 API Contract 跨技术栈**尽可能一致**（详见 requirements.md §2）。
 
 ## 3. 项目结构与多应用管理
 
-本项目采用 **单仓库、多独立应用** 的项目结构。
-
-- **单仓库**：所有技术栈实现集中在同一个仓库 `better-admin/` 中统一管理。
-- **多独立应用**：`apps/react/`、`apps/vue/`、`apps/next/`、`apps/nuxt/`、`apps/nest/` 是相互独立的应用程序。
+**单仓库、多独立应用**：每个 `apps/*` 都能独立运行 / 构建 / 部署（如 `cd apps/react && pnpm dev`）。
 
 ```text
 better-admin/
-├── apps/                    # 全部可独立运行 / 构建 / 部署的应用
-│   ├── next/                # Next.js 全栈实现
-│   ├── nuxt/                # Nuxt 全栈实现
-│   ├── react/               # React（UI 基准；Hero UI + 项目级自定义组件）
-│   ├── vue/                 # Vue + Nuxt UI
-│   ├── nest/                # NestJS 后端 API
-│   └── website/             # 官方文档站（Next 16 + Fumadocs）
-├── docs/                    # 项目文档
-├── assets/                  # 跨端共享的品牌资产真源（assets/logo/，规则见 ui-spec §19）
-├── scripts/                 # 仓库级脚本（sync-versions 等）
-├── README.md
-└── AGENTS.md
+├── apps/       # react（UI 基准）· vue · next · nuxt（两个独立全栈）· nest（API）· website（文档站，Next.js 静态导出）
+├── docs/       # 项目文档（§13）
+├── assets/     # 跨端品牌资产真源 assets/logo/（ui-spec §19）
+├── scripts/    # 仓库级脚本（sync-versions 等）
+└── package.json  # 仅元数据；version 是全产品版本唯一真源（§15）
 ```
 
-**独立性原则**：
-
-- 每个应用应当能够**独立运行、独立构建、独立部署**（例如 `cd apps/react && pnpm dev`）。
-- **不强制**技术栈之间共享依赖。
-- **不因为使用 Workspace 而产生技术栈耦合**：仓库**不引入 pnpm workspace**（各应用独立 lockfile 是子目录独立部署的前提）；目录分层（`apps/`）仅是仓库组织约定，不改变各应用的独立性。
-
----
+- **不引入 pnpm workspace**，各应用独立 lockfile——这是子目录独立部署的前提；`apps/` 分层仅是组织约定，不产生技术栈耦合。
 
 ## 4. 各技术栈职责
 
-> 各技术栈的详细职责、目录结构与数据流详见 [`docs/requirements.md`](docs/requirements.md) §4。以下为 AGENTS 约束要点：
-
 | 技术栈 | 核心约束 |
 | --- | --- |
-| **React** (`apps/react`) | UI Source of Truth；Hero UI 模板实现，不含 Shadcn UI 组件（§7.2）；通过 NestJS API 访问数据库 |
-| **Vue** (`apps/vue`) | 还原 React 版本的页面/交互/UX；Nuxt UI v4 为主（§21）；通过 NestJS API 访问数据库 |
+| **React** (`apps/react`) | UI Source of Truth；Hero UI 模板实现，不含 Shadcn UI（§7.2）；经 NestJS API 访问数据库 |
+| **Vue** (`apps/vue`) | 还原 React 版页面 / 交互 / UX；Nuxt UI v4（§21）；经 NestJS API 访问数据库 |
 | **Next.js** (`apps/next`) | 独立全栈，**不依赖 NestJS**；Hero UI 为主（§7.2） |
-| **Nuxt** (`apps/nuxt`) | 独立全栈，**不依赖 NestJS**；Nuxt UI v4 为主（§21） |
-| **NestJS** (`apps/nest`) | 为 React 和 Vue 提供 REST API；NestJS + Drizzle ORM + PostgreSQL |
+| **Nuxt** (`apps/nuxt`) | 独立全栈，**不依赖 NestJS**；Nuxt UI v4（§21） |
+| **NestJS** (`apps/nest`) | 为 React / Vue 提供 REST API；NestJS + Drizzle ORM + PostgreSQL |
 
----
+详细职责、目录结构与数据流见 requirements.md §4。
 
 ## 5. 数据库架构
 
-> 数据库设计、Supabase 使用范围与访问原则详见 [`docs/requirements.md`](docs/requirements.md) §5。以下为 AGENTS 约束要点：
-
-- **统一 PostgreSQL**（Supabase 托管），仅作数据库平台使用；**不使用** Supabase Auth、RLS、Edge Functions。
-- **Storage 唯一豁免（v1.5.0）**：用户头像允许使用 Supabase Storage（bucket `avatars`，public read）；上传由**服务端持有密钥中转**，浏览器端不接触密钥、不直接读写 Storage。API 密钥使用 `sb_secret_` 前缀，只走 `apikey` 请求头。
-- **浏览器端禁止直接访问 PostgreSQL**；数据库连接信息只存在于服务端环境变量。
-- **默认 ORM 为 Drizzle ORM**；禁止仅因个人偏好更换；无论 ORM 是否一致，必须保证 PostgreSQL Schema / 数据模型 / 业务规则 / 数据类型 / API Contract **五项一致**。
-
----
+- **统一 PostgreSQL**（Supabase 托管），仅作数据库平台；**不使用** Supabase Auth、RLS、Edge Functions。
+- **Storage 唯一豁免**：用户头像可用 Supabase Storage（bucket `avatars`，public read）；上传由**服务端持密钥中转**，浏览器端不接触密钥；API 密钥用 `sb_secret_` 前缀、只走 `apikey` 请求头。
+- **浏览器端禁止直接访问 PostgreSQL**，连接信息只存在于服务端环境变量。
+- **ORM 一律 Drizzle**，禁止仅因偏好更换；无论 ORM 是否一致，PostgreSQL Schema / 数据模型 / 业务规则 / 数据类型 / API Contract **五项一致**。服务端数据库代码动手前先查 `.agents/skills/drizzle-orm`（§18 第 7 条）。
 
 ## 6. API 架构
 
-> RESTful 设计、返回结构与 API 示例详见 [`docs/requirements.md`](docs/requirements.md) §8-§9。
-
-- React 与 Vue 使用 **NestJS** REST API；Next.js 与 Nuxt 各自实现 Server API。
-- **OpenAPI 是 API Contract 唯一事实来源**：API 设计**优先定义 Contract，再进行实现**；所有技术栈必须遵循同一 Contract，不允许为实现方便而自行修改。
-- 修改 API Contract 时，必须**同步评估 React、Vue、Next.js、Nuxt、NestJS** 受到的影响，确认后再执行。
-
----
+- React / Vue 消费 **NestJS** REST API；Next.js / Nuxt 各自实现 Server API。
+- **OpenAPI 是 API Contract 唯一事实来源**（`apps/nest/openapi/openapi.yaml`）：**先定义 Contract，再实现**；所有技术栈遵循同一 Contract，不得为实现方便自行修改。
+- 修改 Contract 必须先评估 **React、Vue、Next.js、Nuxt、NestJS** 五端影响；契约 / Schema 变更先更新 openapi.yaml 与 `apps/nest/docs/database-design.md`，再动实现。
 
 ## 7. UI 一致性要求
 
-### 7.1 UI Source of Truth 与设计基准
-
-- **React 是 Better Admin 的 UI Source of Truth**：页面结构、UI 设计、交互、UX、Design Tokens、组件行为均以 React 版本为基准。React 保持 Source of Truth **并不意味着所有控件都必须塞进 Hero UI**——Hero UI 无对应组件时用项目级自定义组件（见 §7.2）。
-- React 版本（`apps/react`）基于 Hero UI 模板实现，不含 Shadcn UI 组件。**UI 组件库策略独立定义**（见 §7.2）。
-- Vue、Next.js、Nuxt 版本按 React 版本实现，保持页面、组件行为、视觉与交互一致。
-
-### 7.2 UI 组件库策略（核心规则）
-
-| 技术栈 | 主组件库 | 补充 |
-| --- | --- | --- |
-| React / Next.js | **Hero UI** | 项目级自定义组件（组件优先级：**Hero UI > 项目级自定义组件**。Shadcn UI 层级已于 2026-09-22 作废：两端从未引入过 shadcn / radix / cmdk / sonner，也无 `src/components/ui/` 目录） |
-| Vue / Nuxt | **Nuxt UI v4** | 唯一组件库，禁止替代库（组件优先级与操作指引见 §21 与 `docs/nuxt-ui-guide.md`） |
-
-- **样式变量**：React / Next.js 以 Hero UI Design System 为参考形成一套项目级 Design Tokens，Hero UI 与项目级自定义组件共用（见 §7.3）。
-- **整个项目**：React 仍然是 UI / UX Source of Truth；不同技术栈可以使用不同 UI 组件库，但最终页面必须保持统一的视觉、交互、结构和用户体验。
-- **细则单源**：组件选择规则、选型对照、禁止事项、渐进式调整的完整细则以 [`docs/ui-spec.md`](docs/ui-spec.md) §18.3 为准（本节自 2026-09-12 起只留策略级，避免双源漂移）。
-- **HeroUI 文档**：HeroUI v3 文档索引位于 `./.heroui-docs/react`，任何 HeroUI 组件任务**先查文档再动手**（凭记忆写 HeroUI v3 API 极易出错）；本文档的自动索引块已移除，需要时可用 `heroui agents-md --react --output AGENTS.md` 重新生成。⚠️ 该索引由 CLI 拉取、可能滞后于依赖版本（2026-09-21 实测依赖已 3.2.6 而索引停在 3.2.4），新组件（如 `AvatarGroup`）查不到时以官方站文档 + `node_modules` 内 `.d.ts` / 源码取证为准。
-- **浮层开合状态必须用 `useOverlayState`（禁止裸 `useState` 布尔量控制）**：React / Next.js 中所有由布尔值控制的浮层（Modal / AlertDialog / Drawer / Popover / 任意 Overlay 等），其 open 状态**统一使用 Hero UI 导出的 `useOverlayState()` hook 管理**，并严格遵循官方受控写法——`isOpen` / `onOpenChange` 挂在浮层的最外层 Overlay 组件（如 `<AlertDialog.Backdrop isOpen={state.isOpen} onOpenChange={state.setOpen}>`）上，触发用 `state.open()` / `state.close()` / `state.toggle()`。禁止自行用 `useState(true/false)` 把 `isOpen` 挂在 Root/Trigger 上（会导致 react-aria 受控流不匹配、弹窗不显示或控制台报错）。开放状态即「with useOverlayState」，关闭即「禁止裸 useState 布尔量」。
-
-### 7.3 样式变量 / Design Tokens 规则
-
-- React / Next.js 的样式变量、设计 Token、主题变量以 **Hero UI 设计体系为主要参考**，形成**一套项目级 Design Tokens**；**禁止并行维护两套互相独立的设计变量**。
-- 需重点统一：主色、次要颜色、Background / Foreground、Content、Border / Divider、Focus / Hover / Active / Disabled、Radius、Typography（Font Size / Font Weight）、Spacing、Shadow、Transition、Dark Mode / Light Mode。
-- 项目级自定义组件复用这套项目级变量进行适配，与 Hero UI 共用同一视觉体系（圆角、边框、颜色、字体、阴影、间距、Focus / Hover / Disabled、Dark Mode、动画），最终产品不允许出现两套截然不同的组件视觉。
-
-### 7.4 UI 一致性要求
-
-- 四个前端版本需尽可能保持一致的：
-  - **页面**：Dashboard、用户管理、角色管理、权限管理、菜单管理、日志、其他业务页面。
-  - **UI 组件**：Sidebar、Header、Breadcrumb、Table、Form、Dialog、Drawer、Dropdown、Command、Tabs、Card、Button、Input、Select、Date Picker、Toast、Pagination、Empty / Loading / Error State。
-  - **视觉**：色彩体系、字体体系、间距、圆角、阴影、图标风格、Dark Mode、Responsive 行为保持一致。
-
----
+- **7.1 设计基准**：**React 是 UI Source of Truth**（页面结构、交互、Design Tokens、组件行为、Loading / Empty / Error State、Responsive、Dark Mode）；React 未实现的页面，其他栈**不得自行创造 UI 方案**，保持设计语言与基准一致。
+- **7.2 UI 组件库策略**：React / Next.js = **Hero UI + 项目级自定义组件**两级（Shadcn UI 层级已于 2026-09-22 作废）；Vue / Nuxt = **Nuxt UI v4 唯一组件库**。细则单源 [`docs/ui-spec.md`](docs/ui-spec.md) §18.3，Vue / Nuxt 细则见 §21 与 [`docs/nuxt-ui-guide.md`](docs/nuxt-ui-guide.md)。⚠️ **浮层开合状态必须用 Hero UI 的 `useOverlayState()`**（`isOpen` / `onOpenChange` 挂最外层 Overlay 组件，`state.open()` / `close()` / `toggle()` 触发），**禁止裸 `useState` 布尔量控制浮层**——否则 react-aria 受控流不匹配、弹窗不显示（编码级规则，单点维护在本条）。HeroUI 组件任务**先查文档再动手**：`.heroui-docs/react` 索引可能滞后于依赖版本，新组件以官方站 + `node_modules` 内 `.d.ts` / 源码取证为准。
+- **7.3 Design Tokens**：React / Next.js 以 Hero UI 设计体系为主要参考形成**一套项目级 Design Tokens**，全站共用这一套；主色 / Background / Border / Focus / Radius / Typography / Spacing / Shadow / Dark Mode 全覆盖，项目级自定义组件复用同一视觉体系（细则 ui-spec §18.3）。
+- **7.4 跨端一致**：页面、UI 组件、视觉（色彩 / 字体 / 间距 / 圆角 / 阴影 / 图标风格）四端保持一致，组件清单见 requirements.md §7.2。
 
 ## 8. 认证与权限要求
 
-> 认证架构详见 [`docs/requirements.md`](docs/requirements.md) §11。
-
-- 项目**不使用 Supabase Auth**，认证体系由应用自身实现。
-- 四个版本需保持基本一致的认证与权限行为（登录 / 登出 / Session / 用户身份 / 角色 / 权限 / 路由权限 / API 权限）。
-- 权限模型采用 **RBAC**：用户 ↔ 角色 ↔ 权限（位掩码），并支持菜单与权限的关联控制。
-- **服务端必须对 API 做权限校验**，不能只依赖前端路由守卫。
-
----
+- **不使用 Supabase Auth**，认证体系由应用自身实现；四端行为保持一致（登录 / 登出 / Session / 用户身份 / 路由权限 / API 权限）。
+- 权限模型 **RBAC**：用户 ↔ 角色 ↔ 权限（位掩码），支持菜单与权限关联控制；**服务端必须校验 API 权限**，不能只依赖前端路由守卫。
 
 ## 9. 环境变量管理规范
 
-- 每个子项目维护各自的 `.env.local` / `.env`，并提供 `.env.example` 作为参考，提交到仓库。
-- **真实密钥（数据库连接串、JWT 密钥、OAuth Secret 等）严禁提交到仓库**，只存在于本地或部署平台的环境变量中。
-- 数据库连接信息只存在于**服务端**环境变量，禁止暴露给浏览器端。
-- 变量命名使用大写下划线（`DATABASE_URL`、`JWT_SECRET`、`NEXT_PUBLIC_*` / `NUXT_PUBLIC_*` / `VITE_*` 等）。前端可见的变量必须显式带有公开前缀。
-
----
+- 各子项目维护 `.env.local` / `.env`，提供 `.env.example` 提交仓库；**真实密钥（数据库连接串、JWT 密钥、OAuth Secret）严禁入库**。
+- 数据库连接信息只在**服务端**环境变量；前端可见变量必须显式带公开前缀（`VITE_*` / `NEXT_PUBLIC_*` / `NUXT_PUBLIC_*`）；命名用大写下划线（`DATABASE_URL`、`JWT_SECRET`）。
 
 ## 10. Git 提交规范
 
-- 使用 **Conventional Commits** 规范：
-
-```text
-feat: 新增功能
-fix: 修复 bug
-docs: 仅文档变更
-style: 不影响代码含义的格式调整
-refactor: 重构（不新增功能也不修 bug）
-perf: 性能优化
-test: 补/改测试
-chore: 构建、工具、依赖等杂项
-build: 影响构建系统或外部依赖的变更
-ci: CI 配置变更
-```
-
-- 提交信息建议用中文描述，格式：`<type>: <简短描述>`，例如 `feat: 用户管理新增分页功能`。
-- 提交前保持代码可构建、测试通过；避免混入无关改动。
-
----
+- **Conventional Commits**：`feat / fix / docs / style / refactor / perf / test / chore / build / ci`；描述用中文，格式 `<type>: <简短描述>`（如 `feat: 用户管理新增分页功能`）。
+- 提交前保持代码可构建、测试通过；**单次提交单一目的**。
 
 ## 11. 代码规范
 
-- 统一 **Prettier** 格式化，遵循各子项目既定配置。
-- 使用 **ESLint** 进行静态检查，提交前确保无 error。
-- 组件、函数、类型等遵循下文的命名与组织规范。
-- 保持代码可读性，避免为兼容某一版本而牺牲整体一致性。
-
----
+统一 **Prettier** 格式化（遵循各子项目既定配置）+ **ESLint** 静态检查（提交前 0 error）。
 
 ## 12. TypeScript 规范
 
-- 全项目统一使用 **TypeScript**（严格模式），禁止使用 `any` 绕过类型检查。
-- 业务数据类型（用户、角色、权限、菜单等）应定义清晰的 TypeScript 类型 / interface，并在不同技术栈中保持一致结构。
-- API 请求 / 响应类型应与 API Contract 对齐。
-- 前后端共享的数据结构尽量从一份来源派生（如 OpenAPI / 共享类型），以减少漂移。
-
----
+- 全项目 **TypeScript 严格模式**，类型显式标注到接口边界（公共函数签名、业务数据结构、API 请求 / 响应）。
+- 业务数据类型（用户 / 角色 / 权限 / 菜单）定义清晰 interface 并跨栈一致；API 请求 / 响应类型与 API Contract 对齐；共享结构尽量从 OpenAPI 单源派生。
 
 ## 13. 文件组织规范与文档体系
 
-- 各子项目遵循其框架约定的目录结构（Next.js App Router、Nuxt、Vue CLI / Vite、NestJS 模块化、React 组件分层）。
-- 业务模块在各项目中按模块/领域组织（用户、角色、权限、菜单、设置、日志），并尽量保持跨技术栈的结构对应关系。
-
-### 文档体系（单一职责，规则只在一处维护）
+- 各子项目遵循框架约定目录结构（Next App Router、Nuxt、NestJS 模块化等）；业务模块按领域组织（用户 / 角色 / 权限 / 菜单 / 设置 / 日志），保持跨栈结构对应。
+- **文档体系（单一职责，规则只在一处维护）**：
 
 | 文档 | 职责 |
 | --- | --- |
-| `AGENTS.md` | 硬性规则 + 当前阶段/待办指针；**不存放进度细节** |
-| `docs/progress.md` | 阶段性进度记录，新条目**追加在最上方**（倒序）；只记录「做了什么 / 关键决策 / 已知限制」，不写规则 |
-| `docs/mechanisms.md` | 机制沉淀（代码行为的技术结论，代码为准） |
+| `AGENTS.md` | 硬性规则 + 当前阶段指针；不存放进度细节 |
+| `docs/progress.md` | 阶段进度（新条目**置顶**倒序）；查「某模块何时 / 为何做成现在这样」进这里；只记「做了什么 / 关键决策 / 已知限制」 |
+| `docs/mechanisms.md` | 机制沉淀（代码行为的技术结论，代码为准）；遇反直觉框架 / 库行为、排查「为何这样实现」先查这里 |
 | `docs/requirements.md` | 业务需求真源 |
-| `docs/ui-spec.md` | UI 规范真源（AGENTS.md §7 只留策略级规则） |
-| `docs/feature-matrix.md` | **功能矩阵**：四种前端实现的功能对齐状态（✅/❌），新增功能必须同步更新 |
-| `docs/react.md` / `docs/routing.md` | React 版本说明 / 路由说明（只描述技术栈 / 结构 / 约束，**不维护完成状态**） |
-| `docs/react-performance.md` | Vercel 官方 React / Next Skills（性能 / 组合模式 / View Transitions）的项目适用政策 |
-| `docs/nuxt-ui-guide.md` | Nuxt UI 组件使用指引（Vue / Nuxt 端操作细则，§21 指向） |
-| `docs/launch-audit.md` | **上线前审计台账（已归档 2026-09-23，只读追溯用）**：四端对齐后全量盘点出的编号待办（P0–P3 + 需拍板 + 上线环节 + 已核实干净），逐条记处置状态与取证 |
-| `docs/launch-runbook.md` | **上线操作手册（2026-09-23 六端已收官）**：部署顺序、环境变量、各端冒烟勾选与回滚清单；后续版本更新部署时复用 |
-| `docs/code-review-backlog.md` | 代码审查行为级未修项追踪（已修复 / 暂缓备案 / 销项） |
-| `apps/nest/docs/*` | 后端数据库设计、OpenAPI Contract 设计说明 |
+| `docs/ui-spec.md` | UI 规范真源（本文件 §7 只留策略级） |
+| `docs/feature-matrix.md` | **四端功能对齐状态唯一追踪源**（✅/🔧/❌）；查某功能某端做没做进这里（里程碑代号定义在其头部） |
+| `docs/react.md` / `docs/routing.md` | React 版本 / 路由说明（不维护完成状态） |
+| `docs/react-performance.md` | Vercel React Skills 项目适用政策（§20 指向） |
+| `docs/nuxt-ui-guide.md` | Nuxt UI 组件使用指引（§21 指向） |
+| `docs/launch-runbook.md` | 上线操作手册：部署顺序、环境变量、冒烟与回滚（版本更新复用） |
+| `docs/launch-audit.md` / `docs/code-review-backlog.md` | 上线审计台账（已归档只读）/ 代码审查未修项追踪 |
+| `apps/nest/docs/*` | 数据库设计、OpenAPI Contract 设计说明 |
 
-**更新触发**：
-
-- 每完成一个阶段/模块 → `docs/progress.md` 新增条目（置顶）+ `AGENTS.md` 当前阶段指针同步。
-- 契约/Schema 变更 → `apps/nest/openapi/openapi.yaml` / `apps/nest/docs/database-design.md` 先行更新，`docs/progress.md` 记录变更。
-- 发现可复用的机制结论 → 沉淀到 `docs/mechanisms.md`，进度条目里只留一行引用。
-- **现状与历史分离**：描述「当前是什么」的表述过时必须更新；描述「当时做了什么」的记录（`docs/progress.md` 条目、各文档变更记录表、README 阶段历史）**永不回改**——事实修正写新条目，不改旧条目。
-- 引用其他文档一律用**相对路径 + 章节号**，**禁止整段复制规则内容**（避免多源漂移）。
-
----
+- **更新触发**：完成阶段 → progress.md 置顶条目 + §19 同步；契约 / Schema 变更 → openapi.yaml / database-design.md 先行；机制结论 → mechanisms.md（进度条目只留一行引用）；新增功能 → feature-matrix.md（§18 第 5 条）。
+- **现状与历史分离**：「当前是什么」的表述过时必须更新；「当时做了什么」的记录（progress 条目、变更记录表、README 阶段历史）**永不回改**，事实修正写新条目。
 
 ## 14. 命名规范
 
-- 目录 / 文件：小写短横线（kebab-case），如 `user-management/`。
-- 组件名：PascalCase；文件与组件名保持一致。
-- 函数 / 变量 / 接口字段：camelCase。
-- 常量：UPPER_SNAKE_CASE。
-- 路由 / URL：kebab-case。
-- API 契约字段：camelCase，跨技术栈保持一致，避免命名漂移。
+目录 / 文件 kebab-case；组件 PascalCase（与文件名一致）；函数 / 变量 / 字段 camelCase；常量 UPPER_SNAKE_CASE；路由 / URL kebab-case；API 契约字段 camelCase 跨端一致，避免命名漂移。
 
----
+## 15. 依赖与版本管理
 
-## 15. 依赖管理规范
+- 包管理器统一 **pnpm**，依赖锁版本（lockfile），各子项目依赖相互独立；安装新依赖前按 §18 第 10 条评审。
+- **版本按产品级统一**：根 `package.json` 的 `version` 是唯一真源，各子项目 version 同 release 内保持一致。发布流程：改根 version → `pnpm sync-versions`（未变化文件不重写）→ 单提交 `chore: release vX.Y.Z`（先合入 main）→ `git tag vX.Y.Z && git push origin vX.Y.Z` → CI `.github/workflows/release.yml` 自动创建 GitHub Release（tag 校验根 version 一致 + 必须落在 main 上；本仓不发 npm 包）。
 
-- 包管理器统一使用 **pnpm**。
-- 依赖尽量锁定版本（lockfile），避免隐性升级破坏一致性。
-- 各子项目依赖相互独立；如使用根级 Workspace，仅用于共享脚本/类型，不应造成技术栈耦合。
-- 安装新依赖前评估其对一致性维护的影响，避免引入与现有技术栈冲突的方案。
+## 16. 测试与常用命令
 
-### 版本统一管理
-
-- 整个仓库是**同一套产品的多套实现**，版本按**产品级**统一管理：根目录 `package.json`（仅元数据、不放依赖）的 `version` 是唯一真源。
-- 各子项目 package.json 保留各自的 `version` 字段（工具链友好），约定同一 release 内与根保持一致。
-- 发布流程：改根 version → `pnpm sync-versions`（`scripts/sync-versions.mjs`，按子目录存在性分发，未变化的文件不重写）→ 单个提交 `chore: release vX.Y.Z` → 打 git tag `vX.Y.Z`。
-- 该约定不引入 workspace 依赖提升，各子项目仍独立 install / build / deploy；Vercel / Render 部署的 Root Directory 指向 `apps/<应用名>` 子目录，根 package.json 不参与部署。
-
----
-
-## 16. 测试规范
-
-- 关键业务逻辑与 API 应有自动化测试，重点是用户/角色/权限等核心模块。
-- 前端以组件与关键交互测试为主；后端以 API 与业务逻辑测试为主。
-- 数据库相关测试建议使用隔离测试数据库，避免污染共有数据库。
-- 测试与代码同目录或遵循各框架约定；保证测试可独立运行。
-
----
+- 关键业务逻辑与 API 要有自动化测试（重点：用户 / 角色 / 权限）；前端重组件与关键交互，后端重 API 与业务逻辑；数据库测试用隔离库（nest e2e 走共享库 e2e schema，坑见 mechanisms §42）。
+- 各端命令以**环境真源为准**：dev / build / lint / test / type-check（或 typecheck）等 scripts 一律查各端 `package.json`（勿在本文件维护副本）；语言包完整性：react / next 跑 `check-locales`，vue / nuxt 由 `sync-locales` 在 dev / build / test 前自动同步，CI `check-locales.yml` 把关。
 
 ## 17. 部署规范
 
-- **React / Vue**（纯静态 SPA）部署到 **Cloudflare Workers（Static Assets）**（`baiwumm.com` zone 已在 Cloudflare DNS，自定义域直接绑定；配置为各端 `wrangler.jsonc` 的 `assets.directory=./dist` + `not_found_handling=single-page-application`，SPA 深链回退由该字段负责——**Pages 的 `_redirects` 在 Workers 上不生效，不要再加**）：
+- **平台分工速览**：React / Vue → Cloudflare Workers（Static Assets）；Next / Nuxt → Vercel（独立全栈）；website → CF Workers 静态导出；NestJS → Render；数据库 → Supabase PostgreSQL。**各端域名、环境变量、部署顺序与回滚以 [`docs/launch-runbook.md`](docs/launch-runbook.md) 为唯一真源**；六端已于 2026-09-23 上线，线上即演示环境（Nest / Next / Nuxt `DEMO_MODE=true`）。
+- React / Vue 的 SPA 直链回退由 `wrangler.jsonc` 的 `not_found_handling=single-page-application` 提供——**Pages 的 `_redirects` 在 Workers 上不生效，不要再加**。
+- **Next / Nuxt 必须留 Vercel**：数据层是 postgres.js TCP 直连，Workers 运行时跑不了。
+- ⚠️ **Nest Render 保活（勿动）**：UptimeRobot **HTTP(S) 类型**每 5-10 分钟探活无鉴权 `GET /api/health`（无 DB 访问）；**禁止 PING（ICMP）类型**——它不发 HTTP 请求，只会永远 Down 而服务其实健康（机理与验证口径 mechanisms §39）。
 
-```text
-https://react.baiwumm.com
-https://vue.baiwumm.com
-```
-
-- **Next.js / Nuxt**（全栈，postgres.js TCP 直连数据层——Workers 运行时不支持，**必须留 Vercel**）与 **website 文档站**部署到 **Vercel**：
-
-```text
-https://next.baiwumm.com
-https://nuxt.baiwumm.com
-https://better-admin.baiwumm.com
-```
-
-- **NestJS** 部署到 **Render**：
-
-```text
-https://nest.baiwumm.com
-```
-
-- **数据库**：Supabase PostgreSQL。
-- 每个子项目应能独立构建、独立部署；环境变量在对应部署平台配置。
-
-> **统一上线清单（⚠️ 重要：Nest Render 外部保活必做——免费层 15 分钟不活跃即休眠，冷启动 30-50 秒）**
-> ① **Nest 保活（2026-09-12 关键决策）**：上线时**新增无鉴权 `GET /api/health` 健康端点**（无 DB 访问，契约补录）+ 配置 **UptimeRobot / CF Worker Cron 每 5-10 分钟以 HTTP(S) 类型探活**（⚠️ **禁止 PING（ICMP）类型**——它不发 HTTP 请求、Render 入口也不响应 ICMP，配置后只会永远 Down 而服务其实健康；2026-09-23 即因此空转 6 小时，机理与验证口径见 `docs/mechanisms.md` §39）——Render 免费 750 实例小时/月 ≥ 单服务常驻 744h，免费额度恰好覆盖，冷启动彻底消除。已评估并否决的替代平台：Koyeb（同样休眠）、Oracle Always Free（常驻 VPS 但需绑卡自运维，留作将来升级选项）、Cloud Run / Vercel serverless（需绑卡 / 违背平台分散）。
-> ② React / Vue：CF Workers（Static Assets）绑定 + **SPA 直链回退验证**——回退由 `wrangler.jsonc` 的 `not_found_handling=single-page-application` 提供（2026-09-22 由 Pages 改判为 Workers，原 `_redirects` 方案作废；部署执行记录见 `docs/launch-runbook.md`）。
-> ③ **Nest CORS 白名单**：逐一加入四端域名。
-> ④ 各端部署前冒烟：统一按 `docs/launch-runbook.md` 各端清单执行（原各端 plan 文档已删除，结论沉淀于 progress.md 与 runbook）。
-> ⑤ Vercel / CF 侧项目清理（解绑旧域名、暂停不再使用的项目）。
-> ✅ **2026-09-23 六端已全部按上表部署上线，域名全部生效**：Nest（Render + UptimeRobot 保活）/ React·Vue（CF Workers Static Assets）/ Next·Nuxt（Vercel，线上 `DATABASE_URL` 统一 6543）/ website（CF Workers 静态导出，当日由 Vercel 改判）。现状详情见 progress.md 置顶条目与 [`docs/launch-runbook.md`](docs/launch-runbook.md)。
-
----
-
-## 18. AI Agent 开发规则（重要）
-
-以下为所有 AI Agent 在开发 Better Admin 时必须遵守的**硬性规则**。架构约束（§3-§8）不在此重复，详见对应章节。
+## 18. AI Agent 开发规则（硬性）
 
 1. **不允许为了方便而修改既定的项目架构**（架构约束见本文档与 requirements.md）。
 2. **不要为了实现某一个版本而破坏其他版本的设计一致性**。
-3. **React / Next.js 代码生成与重构必须遵循 Vercel 官方 React Skills 三件套**（详见 §20）：`vercel-react-best-practices`（性能与正确性）、`vercel-composition-patterns`（组件组合模式与组件 API 设计）、`vercel-react-view-transitions`（View Transition API 动画）。三个 Skill 均安装于项目 `.agents/skills/`，是所有 React / Next.js 代码产出（新建组件 / 页面、数据获取、重构、性能优化、动画过渡）的硬性规范；若与其冲突，以本文档的架构约束与 UI 组件库策略（§7.2）为更高优先级，但性能模式不得无故违反。
-4. **全局语言规则（跨会话持久生效）**：所有 AI Agent 在本项目中的**全部对话、思考过程与回复一律使用中文**。代码注释、文档、提交信息（Conventional Commits 描述）也以中文为主；仅在代码标识符、命令、API 字段等必须使用英文的场合保留英文。此规则覆盖所有会话，不局限于单一对话。
-5. **功能矩阵同步（跨会话持久生效）**：每次新增功能模块、完成模块迁移、或功能状态发生变化时，**必须同步更新 `docs/feature-matrix.md`**。更新时机：功能开发完成后立即更新对应技术栈的状态标记（✅/🔧/❌），并在提交信息中体现。该文件是四种前端实现功能对齐状态的唯一追踪源。
-6. **Skill 安装位置统一（跨会话持久生效）**：项目级 Agent Skill 一律安装到 `.agents/skills/<skill-name>/`（universal skill 约定路径）。禁止生成或保留 `.claude/skills/`、`agent/` 等其他位置的重复副本；安装 / 更新 Skill 时只维护 `.agents/skills/` 一份，避免多副本漂移。现有清单：`heroui-react`；Vercel 三件套（`vercel-react-best-practices` / `vercel-composition-patterns` / `vercel-react-view-transitions`）+ `web-design-guidelines`；`drizzle-orm`（社区 oakoss 维护，见第 7 条）；Vue / Nuxt 技术栈全套（`nuxt-ui` / `nuxt` / `nitro` / `vue` / `vue-best-practices` / `vue-router-best-practices` / `vue-testing-best-practices` / `pinia` / `vueuse-functions` / `vite` / `vitest` / `pnpm`）。
-7. **Server 端数据库代码生成必须参考 `drizzle-orm` Skill（跨会话持久生效）**：涉及 NestJS / Next.js 的 **schema 定义、查询、事务、迁移（drizzle-kit）、relations** 的代码任务，动手前先查阅 `.agents/skills/drizzle-orm/SKILL.md` 及其 `references/` 分册；重点吸收其 Common Mistakes 反模式（`update`/`delete` 必带 `.where()`、事务包裹多表写入、`.returning()` 取回写入行等）。**参考定位**：该 Skill 为社区维护（oakoss，非 Drizzle 官方），内容可能按更新版本的 API 编写——与项目实际行为冲突时，以**项目既有代码与 drizzle-orm 0.45 的实际行为为准**（如新式 `generatedAlwaysAsIdentity` 不擅自引入，沿用项目既定列定义风格）。
-8. **Nuxt 开发必须遵循官方完整指南（跨会话持久生效）**：Nuxt（`/nuxt`）相关的一切开发必须遵循来自 **https://nuxt.com/llms-full.txt** 的完整 Nuxt 指南（Nuxt 官方全文）；动手前查证框架 API 与行为，**禁止凭记忆使用 Nuxt API**。能力存在官方 Nuxt Module 或框架内置机制时优先采用（**Nuxt Modules / 内置机制优先**的选型口径，原 `docs/nuxt-plan.md` §4 已随文档清理删除，细则可查 progress.md 2026-09-12 条目与 `docs/nuxt-ui-guide.md`）；与本文档架构约束冲突时以本文档为高优先级。
-
-### 需求优先级
-
-AI Agent 在开发时按照以下优先级理解需求：
-
-1. 用户当前明确提出的需求
-2. `docs/requirements.md`
-3. `AGENTS.md`
-4. 项目现有代码与架构
-5. 框架官方最佳实践
-
-如果当前需求与项目既有规则发生冲突：
-
-- **不要静默修改架构**。
-- **不要自行选择一个方案继续开发**。
-- 应**明确指出冲突**，给出可选方案，**等待确认后再进行架构级修改**。
-
-### 不擅自引入依赖
-
-AI Agent 不得为了实现一个简单功能而随意安装新的依赖。
-
-安装新依赖前应判断：
-
-- 是否真的需要
-- 当前项目是否已有替代方案
-- 是否会增加维护成本
-- 是否会影响不同技术栈的一致性
-
-如果存在简单的原生实现或项目已有能力，应**优先使用现有能力**。
-
-### 不擅自修改架构
-
-AI Agent 不得因为当前任务方便而：
-
-- 修改数据库架构
-- 修改 API Contract
-- 修改项目目录结构
-- 更换 ORM
-- 更换认证方案
-- 更换 UI 基础方案
-- 引入新的状态管理方案
-- 引入新的请求库
-
-除非当前任务明确要求，或者发现现有架构无法满足需求。如果确实需要修改，必须先**说明原因和影响**。
-
-### 阶段性开发
-
-Better Admin 是一个长期、多技术栈项目。AI Agent 应按照阶段逐步开发，**不应一次性修改多个技术栈**（默认开发顺序见下文「开发顺序建议」）。
-
-除非用户明确要求，否则：
-
-- 当前阶段只修改当前阶段涉及的项目
-- 不要提前实现后续技术栈
-- 不要因为发现未来需求而提前开发
-- 不要自动进入下一阶段
-
-每个阶段完成后：
-
-1. 检查代码
-2. 检查类型
-3. 检查 lint
-4. 检查测试
-5. 总结修改内容
-6. 明确当前阶段状态
-7. 等待用户安排下一阶段
-
-### 跨技术栈一致性检查
-
-当修改数据库 Schema、API Contract、用户/角色/权限/菜单模型或核心业务规则时，必须考虑对其他技术栈的影响。
-
-例如修改用户字段时，需要评估 `NestJS`、`React`、`Vue`、`Next.js`、`Nuxt`、`Database`、`OpenAPI` 是否需要同步修改。
-
-但是：**评估影响 ≠ 立即修改所有项目。**
-
-如果当前处于单一技术栈开发阶段，只修改当前阶段需要修改的项目，并**记录后续需要同步的内容**。
-
-### UI 基准版本
-
-**React 是 Better Admin 的 UI Source of Truth**，不仅是视觉参考，也是页面布局、组件行为、交互、响应式行为、Dark Mode、Loading / Empty / Error State 的参考基准。Vue、Next.js、Nuxt 后续实现时，应优先参考已经完成的 React 版本。
-
-如果 React 版本尚未实现某个页面：**不要自行在其他技术栈创造一套新的 UI 方案**，应优先保持设计语言与 React 基准一致（遵循 §7.2 组件库策略与 §7.3 项目级 Design Tokens）。
-
-### 开发顺序建议
-
-不要四套前端同时开发，推荐按以下顺序：
-
-```text
-Phase 1  React + Shadcn Admin（完成 UI 基础）← 历史规划；实际以 Hero UI 模板落地，Shadcn 层级已作废（§7.2 / ui-spec §18.3）
-Phase 2  NestJS + PostgreSQL（完成后端基础能力）
-Phase 3  React + NestJS（完成第一套完整全栈系统）
-Phase 4  Vue + NestJS（复刻完整系统）
-Phase 5  Next.js（实现全栈版本）
-Phase 6  Nuxt（实现全栈版本）
-Phase 7  统一测试 → 部署全部版本
-```
-
-> 约定：任何业务开发前先读本文件与 `docs/requirements.md`（见文档开头）；改动某版本时评估其对 UI / 业务 / 数据结构 / API Contract 一致性的影响（见「跨技术栈一致性检查」）；阶段性工作完成后按 §10 规范提交。
-
----
+3. **React / Next.js 代码生成与重构必须遵循 Vercel 官方 React Skills 三件套**（性能 / 组合模式 / View Transitions，详见 §20）；与本文档架构约束、UI 组件库策略（§7.2）冲突时以后者更高优先级，但性能模式不得无故违反。
+4. **全局语言规则（跨会话持久生效）**：全部对话、思考与回复一律**中文**；代码注释、文档、提交信息也以中文为主，仅代码标识符、命令、API 字段等必须英文的场合保留英文。
+5. **功能矩阵同步（跨会话持久生效）**：新增功能、完成迁移或功能状态变化时**必须同步 `docs/feature-matrix.md`**，并在提交信息中体现；该文件是四端对齐状态唯一追踪源。
+6. **Skill 安装位置统一（跨会话持久生效）**：项目级 Skill 一律装到 `.agents/skills/<skill-name>/`，装入前先 `ls .agents/skills/` 查重（现有清单以目录为准，勿在本文件维护副本）；禁止 `.claude/skills/`、`agent/` 等重复位置，skills CLI 若自动生成 `.claude/` 符号链接应删除。
+7. **Server 端数据库代码必须参考 `drizzle-orm` Skill**（schema / 查询 / 事务 / 迁移 / relations，重点吸收其反模式清单）。该 Skill 为社区维护（非官方），与项目实际行为冲突时**以项目既有代码与 drizzle-orm 0.45 实际行为为准**。
+8. **Nuxt 开发必须遵循官方完整指南（跨会话持久生效）**：一切 Nuxt 开发先查证 https://nuxt.com/llms-full.txt ，**禁止凭记忆使用 Nuxt API**；能力有官方 Module 或框架内置机制时优先采用；与本文档冲突时以本文档为高优先级。
+9. **需求优先级**：用户当前明确需求 > `docs/requirements.md` > `AGENTS.md` > 项目现有代码与架构 > 框架官方最佳实践。需求与既有规则冲突时：**不静默修改架构、不自行选方案**，明确指出冲突、给出可选方案、**等确认后再动架构**。
+10. **不擅自引入依赖**：新依赖先评估是否真的需要 / 有无现有替代 / 维护成本 / 对跨栈一致性的影响；有简单原生实现或既有能力时优先用现有能力。
+11. **不擅自修改架构**：数据库 Schema、API Contract、目录结构、ORM、认证方案、UI 基础方案、状态管理、请求库均不得因任务方便而更换；确需修改先说明原因与影响。
+12. **阶段性开发**：**一次只改当前阶段涉及的技术栈**，新想法只登记不动手（开发顺序 Phase 1-7 已全部走完，定义见 requirements.md §15，项目现处持续迭代期）。阶段完成的门槛全部可观测：受影响端 `build` 通过、类型检查 0 error、改动文件 eslint 0 error、测试全绿；随后总结修改、明确阶段状态、等待用户安排下一阶段。
+13. **跨技术栈一致性检查**：改 Schema、Contract、核心模型或业务规则时必须评估 **NestJS、React、Vue、Next.js、Nuxt 五端与数据库 / OpenAPI 真源**的影响——**评估 ≠ 立即全改**：单栈阶段只改当前栈，待同步项**登记到 progress.md 当前条目**（写明涉及端与文件），完成同步后销项。
+14. **UI 基准**：React 不仅是视觉参考，也是布局、组件行为、响应式、Dark Mode 与三态（Loading / Empty / Error）的参考基准；对齐口径见 §7。
 
 ## 19. 当前阶段状态
 
-> 阶段性进度记录见 [`docs/progress.md`](docs/progress.md)（按时间倒序），本节只保留当前快照与少量「勿遗忘」的现行约束，**不存放进度细节**；阶段由用户明确安排后再推进。四端功能对齐状态的唯一追踪源为 [`docs/feature-matrix.md`](docs/feature-matrix.md)（当前 29/29 全对齐）。
+> 进度细节一律查 [`docs/progress.md`](docs/progress.md)（倒序）与 feature-matrix；本节只留快照与「勿遗忘」约束。
 
-- **当前阶段**：**六端统一上线已完成（2026-09-23），v1.0.0 已发布**——Nest（Render + UptimeRobot 保活）/ React·Vue（CF Workers Static Assets）/ Next·Nuxt（Vercel）/ website（CF Workers 静态导出）全部部署并冒烟通过，线上即演示环境（Nest / Next / Nuxt `DEMO_MODE=true`），收官线上 contract-diff 31 步一致；域名与部署平台见 §17，上线全过程与冒烟记录见 [`docs/launch-runbook.md`](docs/launch-runbook.md)。各端实现历史与各模块完成明细一律查 progress.md 对应条目与 feature-matrix，本节不再重复。
-- **当前待办**：**已清零**（refresh token JWT 同秒重复缺陷已于 2026-09-25 按 jti 方案根治，机理见 `docs/mechanisms.md` §42 坑 4）；新待办出现时在此登记。（CI `nest-e2e` 走自托管 TLS postgres 容器，曾要求的 `TEST_DATABASE_URL` secret 已不再使用、可删；Supabase 直连/pooler 不可用作 CI 测试库的原因见 `docs/mechanisms.md` §42。）
-- ⚠️ **website 内容是手写 MDX、不是 `docs/` 的自动同步**（`apps/website/content/**` 独立维护，仓库无同步脚本）——`docs/` 每次口径变化都必须人工回写文档站（上线前曾因此积压过时数字，见 `docs/launch-audit.md` #11 / #12）。
-- **品牌标识（Logo / Favicon）**：已定稿方案 03「Monogram B」精修版，真源为 `assets/logo/`（五端 `public/` 图标资产 **+ Next 端 `apps/next/src/app/` 文件约定图标** 均由 `assets/logo/build-assets.py` 统一生成，**新增端或新增图标路径时必须同步扩展脚本**），几何常量 / 命名对照 / 硬性规则 / 验收口径见 [`docs/ui-spec.md`](docs/ui-spec.md) §19。⚠️ Next App Router 的 file-based metadata 优先于 `metadata.icons`，`src/app/` 那组才是 Next 端标签页图标实际生效来源。
-- **Playground 演示场**：10 页四端全部对齐（明细见 feature-matrix 与 progress.md 2026-09-14 ~ 09-21 条目）。⚠️ **引入会自行输出 className 的第三方渲染器时须先查与 HeroUI 全局 BEM 类撞名**（`mechanisms.md` §27，曾发生 prism `.tag` 撞 HeroUI Tag 样式）。
-- **TanStack 官方 Agent Skills（已评估、暂缓安装，勿遗忘）**：官方 SKILL.md 内嵌于 npm 包（`skills/<name>/SKILL.md`，随包版本更新，机制见 tanstack.com/intent）；项目已装版本（react-query 5.99 / 5.102.8、table 9.2.x、router 1.168）**尚不含 skills 目录**，须升级依赖才可获得。安排：待三端下次例行升级 react-query / react-table / react-router（含 vue-query / vue-table 对应版本）时随包带入，升级后在 §20 补指路条目；**不要为获取 Skill 而单独发起依赖升级**（§15 锁版本约定）。
-- **super_admin 保护设计依据（重要，勿推翻）**：超管的"全量权限"不是代码身份判定，而是 seed 写入 role_menus 的 -1n 全量位经登录/每请求实时 OR 聚合而来（`auth.service.aggregatePermissions`）；PermissionsGuard 与菜单可见性的"超管免检"分支判据都是聚合值。清空其授权 = 全后台立即 403 且无自助恢复手段，故 `PUT /roles/{id}/menus` 与 `DELETE /roles/{id}` 对 `code === 'super_admin'` 必须返回 403 `SUPER_ADMIN_ROLE_PROTECTED`（详细背景见 progress.md 契约 v1.4.2/v1.4.3 条目）。
+- **当前阶段**：六端统一上线已完成（2026-09-23）后进入持续迭代，最新版本 **v1.1.0**（tag 见 release.yml 流程）。近期里程碑：Nest e2e 基建 31 用例（2026-09-25，mechanisms §42）、refresh token 同秒重复缺陷 jti 根治（2026-09-25，§42 坑 4）、Nest auth 限流 + trust proxy 三跳（2026-10-14，§43）、Vercel WAF 防刷上线（runbook §0.3）。
+- **当前待办**：**已清零**；新待办出现时在此登记。
+- 📌 **备忘（非待办）**：CI `nest-e2e` 走自托管 TLS postgres 容器，初版方案的 `TEST_DATABASE_URL` secret 已不再使用、可删；Supabase 直连 / pooler 不可用作 CI 测试库的原因见 mechanisms §42。
+- ⚠️ **website 内容是手写 MDX、不是 `docs/` 的自动同步**（`apps/website/content/**` 独立维护）——`docs/` 每次口径变化必须人工回写文档站（曾因此积压过时数字，launch-audit #11 / #12）。
+- **品牌标识**：已定稿方案 03「Monogram B」精修版，真源 `assets/logo/`；除 Next 外五端的 `public/` 图标 + Next 端 `src/app/` 文件约定图标均由 `build-assets.py` 统一生成，**新增端或图标路径必须同步扩展脚本**；几何常量与验收口径 ui-spec §19。⚠️ Next 的 file-based metadata 优先于 `metadata.icons`。
+- **super_admin 保护设计（勿推翻）**：超管「全量权限」是 seed 写入 role_menus 的 `-1n` 全量位经登录 / 每请求实时 OR 聚合而来（`auth.service.aggregatePermissions`），**不是代码身份判定**；清空授权 = 全后台立即 403 且无自助恢复，故 `PUT /roles/{id}/menus` 与 `DELETE /roles/{id}` 对 `code === 'super_admin'` 必须返回 403 `SUPER_ADMIN_ROLE_PROTECTED`（背景见 progress.md 当时的契约 v1.4.2 / v1.4.3 条目——契约版本独立于产品版本编号，现行 v1.14.1）。
+- **Playground 演示场**：10 页四端全部对齐（明细见 feature-matrix）；引入会自行输出 className 的第三方渲染器前，先查与 HeroUI 全局 BEM 类撞名（mechanisms §27，曾发生 prism `.tag` 撞 HeroUI Tag）。
+- **TanStack 官方 Skills（暂缓安装，勿遗忘）**：官方 SKILL.md 内嵌于 npm 包，项目已装版本尚不含；待四端下次例行升级 TanStack 全家桶（react / next 端的 react-query / react-table / react-router，vue / nuxt 端的 vue-query / vue-table）时随包带入并在 §20 登记，**不要为获取 Skill 单独发起依赖升级**（§15 锁版本约定）。
 
----
+## 20. React / Next.js 全局规范（Vercel Skills）
 
-## 20. React / Next.js 全局规范（Vercel Skills：性能 / 组合模式 / View Transitions）
-
-- 所有 **React / Next.js 代码生成与重构**（新建组件 / 页面、数据获取、重构、性能优化）必须遵循项目安装的 `vercel-react-best-practices` Skill（`.agents/skills/vercel-react-best-practices`，性能与正确性规范，规则详情以 Skill 为准）。
-- **组件设计与重构**（复合组件、组件 API 设计、状态提升、消除 prop drilling / 布尔 prop 泛滥）必须遵循 `vercel-composition-patterns` Skill（`.agents/skills/vercel-composition-patterns`，含 React 19 API 变更）。
-- **动画过渡**（页面 / 路由过渡、共享元素过渡、方向性导航动画、View Transition API 相关任务）必须先查 `vercel-react-view-transitions` Skill（`.agents/skills/vercel-react-view-transitions`）；项目主题切换揭示动画与路由过渡（§7 / `route-transitions`）即基于该 API，扩展时以 Skill 为准、不引入第三方动画库。
-- **Next.js 框架 API / 行为**（App Router、RSC、缓存语义、路由、中间件、server API 等）**以包内内置官方文档为准**：`apps/next/node_modules/next/dist/docs/`（421 篇，版本与项目 16.2.6 精确匹配，随 `pnpm install` 到位）——先查文档再写 Next API，不凭训练记忆；涉及框架行为不确定时引用文档路径佐证。背景：官方 `next-best-practices` skill 已停发、知识改走内置 docs 路线（`vercel-labs/next-skills` 已弃包，勿安装旧副本）；升级 Next 16.3+ 后 `next dev` 会自动生成/更新 agent 规则文件，届时须人工核对其不覆盖本文档自定义条目。
-- 触发范围、Skill 优先加载、冲突裁决与适用范围限定等项目政策详见 [`docs/react-performance.md`](docs/react-performance.md)；若与本文档架构约束冲突，以本文档为高优先级。Vue / Nuxt 端不适用本节 React 专属规则（见 §21）。
-
----
+- React / Next.js 一切代码生成与重构必须遵循三件套：`vercel-react-best-practices`（性能与正确性）、`vercel-composition-patterns`（组合模式与组件 API，含 React 19 变更）、`vercel-react-view-transitions`（动画过渡，扩展动画不引入第三方库），均装于 `.agents/skills/`。
+- 触发范围、冲突裁决与适用范围限定详见 [`docs/react-performance.md`](docs/react-performance.md)；与本文档架构约束冲突时以本文档为高优先级；Vue / Nuxt 不适用本节（见 §21）。
+- **Next.js 框架 API / 行为以包内内置官方文档为准**：`apps/next/node_modules/next/dist/docs/`（版本与依赖精确匹配，随 install 到位）——先查文档再写 Next API，不凭训练记忆；升级 Next 16.3+ 后 `next dev` 自动生成的 agent 规则文件须人工核对不覆盖本文档。
 
 ## 21. Vue / Nuxt 全局组件规范（Nuxt UI）
 
-- **组件库唯一**：Vue（`apps/vue`）与 Nuxt（`apps/nuxt`）端 UI 组件库统一为 **Nuxt UI v4**（`@nuxt/ui`，Tailwind CSS v4 + Reka UI）。**禁止引入** Vuetify、Quasar、Element Plus、PrimeVue、shadcn-vue 等替代 UI 库。
-- **组件优先级（硬性）**：Nuxt UI 内置组件（`@nuxt/ui`）→ Nuxt UI 没有对应组件 / 不适合当前场景时用项目级自定义组件（基于 Nuxt UI 原子组件拼装，代码注释说明原因）→ 第三方 Vue 组件库（必须先评审：记录理由 + 替代方案评估，批准后方可引入）。
-- **图表库不属于「UI 组件库唯一」约束**（Nuxt UI v4 已无内置图表组件），按上一条走评审后单独选型：Vue 端 = **Unovis**（`@unovis/vue` + `@unovis/ts`，精确锁版），Nuxt 端 = **nuxt-charts**（底层 vccs，Recharts 的 Vue 移植）。两端**不强求同源引擎**；图表只对齐功能与信息口径（同一数据 / 同一交互语义 / 同一 Design Token 取色），不对齐像素级观感。选型实测数据与替代方案评估见 `docs/mechanisms.md` §32。
-- **布局硬约束**：侧边栏 / 顶部栏 / 命令面板必须优先使用官方 Dashboard 套件（`UDashboardGroup` / `UDashboardPanel` / `UDashboardSidebar` / `UDashboardNavbar` / `UDashboardSearch` / `UCommandPalette` 等），禁止从零手写布局。命名说明：`UDashboardLayout` 为 v3 名称，v4 对应组件为 `UDashboardGroup`。
-- **代码生成前置检查**：任何涉及 Vue / Nuxt 的代码生成任务，产出代码前必须：① 确认 Skill 可用（`npx skills ls -g` 应列出 `nuxt/ui` 与 antfu/skills 系列，全局安装于 `~/.agents/skills/`）；② 查阅 Nuxt UI 官方文档确认目标组件存在、API 用法正确；**禁止凭记忆或猜测使用 Nuxt UI API**。
-- **主题策略**：直接使用 Nuxt UI 默认 Design Tokens 与 Color System，暗色模式由其内置 color mode（`useColorMode`）提供；不从 React 端移植 `theme.css` token、不建立 `--ui-*` 映射层；品牌定制通过 Nuxt UI 的 `ui({ ui: { colors } })` 配置实现，禁止在业务代码中硬编码色值。
-- **UI 对齐口径**：页面结构、布局骨架、交互行为与 React 端保持一致（侧边栏折叠/展开、Header 操作区顺序、表格工具栏位置等）；组件视觉直接使用 Nuxt UI 默认风格，不刻意模仿 React（HeroUI）样式；品牌标识（Logo、产品名）保持一致；**功能对齐优先于像素级视觉对齐**。
-- **操作指引**：组件优先级、常用组件映射、Dashboard 套件示例、HeroUI 对照表、纯 Vue 安装事实见 [`docs/nuxt-ui-guide.md`](docs/nuxt-ui-guide.md)。
-- 本节为 Vue / Nuxt 范围内的更高优先级规则，与 §7.2 中 Vue / Nuxt 相关表述冲突时以本节为准。
+> 本节为 Vue / Nuxt 范围内的更高优先级规则，与 §7.2 相关表述冲突时以本节为准；操作细则见 [`docs/nuxt-ui-guide.md`](docs/nuxt-ui-guide.md)。
+
+- **组件库唯一**：Vue 与 Nuxt 统一 **Nuxt UI v4**（`@nuxt/ui`）；**禁止引入** Vuetify、Quasar、Element Plus、PrimeVue、shadcn-vue 等替代库。
+- **组件优先级（硬性）**：Nuxt UI 内置 → 项目级自定义组件（基于 Nuxt UI 原子组件拼装，注释说明原因）→ 第三方 Vue 组件库（必须先评审：记录理由 + 替代方案，批准后引入）。
+- **布局硬约束**：侧边栏 / 顶部栏 / 命令面板必须优先官方 Dashboard 套件（`UDashboardGroup` / `UDashboardPanel` / `UDashboardSidebar` / `UDashboardNavbar` / `UDashboardSearch` / `UCommandPalette` 等），禁止从零手写。
+- **图表库不属于「UI 组件库唯一」约束**：Vue 端 = **Unovis**（`@unovis/vue` + `@unovis/ts` 精确锁版），Nuxt 端 = **nuxt-charts**；不强求同源引擎，只对齐功能与信息口径（选型实测 mechanisms §32）。
+- **主题策略**：直接用 Nuxt UI 默认 Design Tokens 与 Color System，暗色由内置 color mode 提供；不从 React 端移植 token、不建映射层；品牌定制经 `ui({ ui: { colors } })`，禁止业务代码硬编码色值。
+- **代码生成前置检查**：产出前 ① 确认 Skill 可用（`npx skills ls` 应列出 `nuxt/ui` 与 antfu 系列，Vue / Nuxt 全套已装于项目级 `.agents/skills/`）；② 查 Nuxt UI 官方文档确认组件存在、API 正确，**禁止凭记忆或猜测使用 Nuxt UI API**。
+- **UI 对齐口径**：页面结构、布局骨架、交互行为与 React 端一致（侧边栏折叠、Header 操作区顺序等）；组件视觉直接用 Nuxt UI 默认风格，不刻意模仿 HeroUI；品牌标识一致；**功能对齐优先于像素级对齐**。

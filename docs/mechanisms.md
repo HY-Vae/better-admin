@@ -1,9 +1,9 @@
-# 机制梳理：权限点请求 / 标签页保活 / 菜单可见性与超管 / 列表缓存展示策略
+# 机制沉淀：跨端与框架行为的实测结论（§0-§43）
 
 > 本文沉淀高频疑问的机制结论，供开发与排查快速查阅。
 > 相关设计文档：`apps/nest/docs/database-design.md`（§1.1 超管全量位、§1.5 菜单可见性）、
 > `docs/progress.md`（keepAlive 路由缓存 + 过渡动画重构条目）、`apps/nest/openapi/openapi.yaml`（API Contract）。
-> 更新日期：2026-09-09（基于当前代码实现梳理，代码为准）。
+> 持续追加（最新：§43，2026-10-14）；各条按当时代码实现梳理，一律以代码为准。
 
 ---
 
@@ -883,7 +883,7 @@ pnpm-workspace overrides 统一到 3.12.4 根治。**教训：往既有 lockfile
 ## 24. 图标运行时零外网：serverBundle.collections 整包 + fallbackToApi:false（Nuxt 端，M0）
 
 **结论：`icon.clientBundle` 没有 collections 选项**（包内类型仅 icons / scan /
-includeCustomCollections / sizeLimitKb——nuxt-plan §4 初稿「clientBundle(collections)」
+includeCustomCollections / sizeLimitKb——已删的 nuxt-plan §4 初稿「clientBundle(collections)」
 表述有误）；SPA 模式的整包集合由 **`icon.serverBundle: { collections: ['lucide', 'logos'] }`**
 承担——本地 collection 打进 Nitro server bundle，运行时经本地 API `/api/_nuxt_icon`
 提供（ssr:false 下 Nitro server 照常运行），配 **`fallbackToApi: false`** 禁止回退

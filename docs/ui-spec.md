@@ -794,14 +794,14 @@ C:\Users\Administrator\.workbuddy\binaries\python\envs\default\Scripts\python.ex
 
 | 日期 | 版本 | 说明 |
 | --- | --- | --- |
-| 2026-09-17 | v1.6 | 架构图谱去虚拟根 + 默认折叠（§1.3 交互）：移除顶部「Better Admin」虚拟根节点（顶级组织直接作为根层），初始仅展开前两级、更深层级默认收起，四端同步；语言包删除 rootBadge / rootSubtitle 键 |
-| 2026-09-14 | v1.5 | 补齐 Next 端文件约定图标：`apps/next/src/app/{favicon.ico,icon0.svg,icon1.png,apple-icon.png}` 纳入脚本生成与 §19.3 登记（该组优先级高于 `metadata.icons`，此前只换 `public/` 会残留旧品牌图标）；§19.4 / §19.6 同步 |
-| 2026-09-14 | v1.4 | 新增 §19 品牌标识资源（Logo / Favicon）：登记方案 03「Monogram B」精修定稿的几何常量、双几何策略（品牌 64–192 / 图标 52–204）、`assets/logo/` 与 `apps/*/public/` 的命名对照、硬性规则与验收结果；原 §19 变更记录顺延为 §20 |
 | 2026-08-21 | v0.1 | 基于 Shadcn Admin v2.2.1 源码分析产出初版 UI Spec |
-| 2026-09-12 | v1.3 | 文档整合：§19 Phase 1B 落地记录迁入 progress.md（Phase 1B 条目），本文件不再保存落地流水账；§20 变更记录顺延为 §19 |
 | 2026-08-21 | v0.2 | Phase 1B 落地记录：品牌化、Sidebar 调整、页面占位、Demo 清理、中文化 |
 | 2026-08-22 | v0.3 | UI 组件库策略更新：React / Next.js 以 Hero UI 为主 + Shadcn UI 补充（§18.3）；样式变量以 Hero UI 设计体系为主要参考；Vue / Nuxt 保持 Shadcn UI |
-| 2026-09-05 | v1.2 | Vue / Nuxt 组件库策略切换为 **Nuxt UI v4**（头部策略、§1.1 差异注、§18.3）；同步 `AGENTS.md` §21 与 `docs/nuxt-ui-guide.md` |
 | 2026-09-02 | v1.0 | 文档重构：基于当前 React Hero UI 基准版本更新，移除 Shadcn Admin 历史引用与 Phase 1B 规划表述，同步页面结构与技术栈现状 |
 | 2026-09-03 | v1.1 | 新增组织架构图谱页面规划与交互边界（§1.3，阶段 4，未实施）；明确四端图谱 / 图表一致性原则：实现库可不同（React/Next → @xyflow/react + Recharts；Vue/Nuxt 待其对应阶段决策），视觉靠本规范对齐 |
+| 2026-09-05 | v1.2 | Vue / Nuxt 组件库策略切换为 **Nuxt UI v4**（头部策略、§1.1 差异注、§18.3）；同步 `AGENTS.md` §21 与 `docs/nuxt-ui-guide.md` |
+| 2026-09-12 | v1.3 | 文档整合：§19 Phase 1B 落地记录迁入 progress.md（Phase 1B 条目），本文件不再保存落地流水账；§20 变更记录顺延为 §19 |
+| 2026-09-14 | v1.4 | 新增 §19 品牌标识资源（Logo / Favicon）：登记方案 03「Monogram B」精修定稿的几何常量、双几何策略（品牌 64–192 / 图标 52–204）、`assets/logo/` 与 `apps/*/public/` 的命名对照、硬性规则与验收结果；原 §19 变更记录顺延为 §20 |
+| 2026-09-14 | v1.5 | 补齐 Next 端文件约定图标：`apps/next/src/app/{favicon.ico,icon0.svg,icon1.png,apple-icon.png}` 纳入脚本生成与 §19.3 登记（该组优先级高于 `metadata.icons`，此前只换 `public/` 会残留旧品牌图标）；§19.4 / §19.6 同步 |
+| 2026-09-17 | v1.6 | 架构图谱去虚拟根 + 默认折叠（§1.3 交互）：移除顶部「Better Admin」虚拟根节点（顶级组织直接作为根层），初始仅展开前两级、更深层级默认收起，四端同步；语言包删除 rootBadge / rootSubtitle 键 |
 | 2026-09-22 | v1.2 | **Shadcn UI 层级作废（用户拍板，`docs/launch-audit.md` #18）**：§18.3 由三级（Hero UI → Shadcn → 自定义）改为**两级（Hero UI → 项目级自定义组件）**，选型对照表按实际实现重写（原文标注为 Shadcn 的 Command / Sidebar / Form / Dialog / Toast 实为项目自建或 Hero UI 组件，两端从无 shadcn / radix / cmdk / sonner 依赖，也无 `src/components/ui/`）；§10.1 表单「现状」按实现重写（真实形态是 `useForm` + `Controller` 包 Hero UI 字段件，原文列的 `FormProvider` / `FormItem` / `FormMessage` / `h-9` / `text-destructive` 在代码里一个都不存在）；§8 圆角同步改为 HeroUI 派生刻度；文首、§17 技术栈表、组件优先级与 import 白名单一并校正。`AGENTS.md` §2/§7.1-7.3/§18、`requirements.md` §2/§4/§7.3/§9/§12/§14 与架构图、`README.md`、`docs/react.md` 同步。 |
